@@ -47,7 +47,7 @@ def bin_pos(position,num_par=2,type="grid"):
 
 def design_matrix_encoder(binned_position,spikes,ntfilt,nthist):
     '''
-    to construct design matrix from postion and spike data
+    to construct design matrix for GLM encoder
 
     parameters:
     ntfilt: number of time bins of position
@@ -70,6 +70,12 @@ def design_matrix_encoder(binned_position,spikes,ntfilt,nthist):
     design_mat_all_offset = np.hstack((np.ones((num_time_bins,1)), design_mat_all))
 
     return design_mat_all_offset
+
+def design_matrix_decoder(spikes):
+    '''
+    to construct design matrix for linear gaussian decoder
+    '''
+    return spikes
 
 
 if __name__=="__main__":
