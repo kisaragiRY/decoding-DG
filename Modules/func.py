@@ -81,6 +81,11 @@ def design_matrix_decoder(spikes):
     return design_mat_all_offset
 
 
+def cal_mse(prediction,observed):
+    tmp=[(i-j)**2 for i,j in zip(prediction,observed)]
+    return np.sum(tmp)/len(prediction)
+
+
 if __name__=="__main__":
     data_dir='Modules/data/alldata/'
     datalist=os.listdir(data_dir)
