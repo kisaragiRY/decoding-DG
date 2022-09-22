@@ -3,14 +3,14 @@ import pandas as pd
 import numpy as np
 from scipy.linalg import hankel
  
-def data_loader(data_name):
+def data_loader(data_dir):
     '''
     load positiona and spike data
     '''
-    position_df=pd.read_excel(data_name+'/position.xlsx')
+    position_df=pd.read_excel(data_dir/'position.xlsx')
     position=position_df.values[3:,1:3] # only take the X,Y axis data
 
-    spikes_df=pd.read_excel(data_name+'/traces.xlsx',index_col=0)
+    spikes_df=pd.read_excel(data_dir/'traces.xlsx',index_col=0)
     spikes=spikes_df.values
 
     # make sure spike and postion data have the same length
@@ -75,7 +75,10 @@ def design_matrix_decoder(spikes):
     '''
     to construct design matrix for linear gaussian decoder
     '''
-    return spikes
+    num_time_bins,_ = spikes.shape
+    # add offset
+    design_mat_all_offset = np.hstack((np.ones((num_time_bins,1)), spikes))
+    return design_mat_all_offset
 
 
 if __name__=="__main__":

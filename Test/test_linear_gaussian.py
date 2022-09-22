@@ -13,14 +13,14 @@ n_positions=4
 def train_set():
     np.random.seed(0)
     design_matrix_train= np.random.rand(time_bins_train,n_neurons)
-    binned_position_train=np.random.randint(0,n_positions+1,size=time_bins_train).reshape(-1,1)
+    binned_position_train=np.random.randint(0,n_positions+1,size=(time_bins_train,1))
     return design_matrix_train,binned_position_train
 
 @pytest.fixture
 def test_set():
     np.random.seed(0)
     design_matrix_test= np.random.rand(time_bins_test,n_neurons)
-    binned_position_test=np.random.randint(0,n_positions+1,size=time_bins_test).reshape(-1,1)
+    binned_position_test=np.random.randint(0,n_positions+1,size=(time_bins_test,1))
     return design_matrix_test,binned_position_test
 
 def test_fit(train_set):
