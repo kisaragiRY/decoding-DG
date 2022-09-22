@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "dg-encoder-decoder"
+version = "0.1.0"
+description = ""
+authors = ["Kisaragi"]
+readme = "README.md"
+packages = [{include = "dg_encoder_decoder"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pytest = "^7.1.3"
+numpy = "^1.23.3"
+pandas = "^1.4.4"
+matplotlib = "^3.5.3"
+openpyxl = "^3.0.10"
+statsmodels = "^0.13.2"
+ipykernel = "^6.15.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
