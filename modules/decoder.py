@@ -1,3 +1,4 @@
+from turtle import pen
 import numpy as np
 from scipy.linalg import inv
 from pathlib import Path
@@ -20,6 +21,7 @@ class linear_gaussian():
     def fit(self,design_matrix_train:np.array,binned_position_train:np.array):
         '''
         fitting based on training data
+        return the fitted coefficients
         '''
         tmp1=np.einsum("ji,ik->jk",design_matrix_train.T,design_matrix_train)
         tmp2=np.einsum("ji,ik->jk",design_matrix_train.T,binned_position_train)
@@ -31,13 +33,42 @@ class linear_gaussian():
         '''
         return np.einsum("ij,j->i",design_matrix_test,self.theta)
 
+class linear_gaussian_ridge():
+    '''
+    a linear guassian ridge model
+    x_t=theta.T・n_t + b_t
+    x_t: discretized position
+    theta: parameter
+    n_t: spikes
+    b_t: intercept
+    '''
+    def __init__(self) -> None:
+        pass
+
+    def fit(self,design_matrix_train:np.array,binned_position_train:np.array,penalty:float):
+        '''
+        fitting based on training data
+        return the fitted coefficients
+        '''
+        tmp1=np.einsum("ji,ik->jk",design_matrix_train.T,design_matrix_train)
+        tmp2=np.einsum("ji,ik->jk",design_matrix_train.T,binned_position_train)
+        self.theta= np.einsum("ji,ik->j",inv(tmp1+penalty*np.identity(len(tmp1))),tmp2)
+        return self.theta
+    def predict(self,design_matrix_test:np.array):
+        '''
+        predicting based on test data
+        return the predicted results
+        '''
+        return np.einsum("ij,j->i",design_matrix_test,self.theta)
+
 if __name__=="__main__":
     import matplotlib.pyplot as plt
 
-    all_data_dir=Path('Modules/data/alldata/')
+    all_data_dir=Path('data/alldata/')
     datalist=[x for x in all_data_dir.iterdir()]
     
-    output_dir=Path("Output/data/linear_gaussian/")
+    # output_dir=Path("Output/data/linear_gaussian/")
+    output_dir=Path("output/data/linear_gaussian_ridge/")
     if not output_dir.exists():
         output_dir.mkdir()
 
@@ -64,13 +95,21 @@ if __name__=="__main__":
         design_mat_train, binned_position_train = design_mat_all[:n_time_bins_train] , binned_position[:n_time_bins_train].reshape(-1,1)
         design_mat_test, binned_position_test = design_mat_all[n_time_bins_train:] , binned_position[n_time_bins_train:].reshape(-1,1)
 
-        lg=linear_gaussian()
-        theta=lg.fit(design_mat_train, binned_position_train)
-        prediction=lg.predict(design_mat_test)
+        theta_prediction_penalty=[]
+        for p in range(10):
+            lgr=linear_gaussian_ridge()
+            try: 
+                theta=lgr.fit(design_mat_train, binned_position_train,p)
+                prediction=lgr.predict(design_mat_test)
+            except:
+                print("fitting failed")
+                theta=np.nan
+                prediction=np.nan
+            theta_prediction_penalty.append([theta,prediction,p])
 
         # save theta(parameter) , prediction , test_data
         with open(output_dir/(f"lg_predict_{data_name}.pickle"),"wb") as f:
-            pickle.dump([theta,prediction,binned_position_test],f)
+            pickle.dump([theta_prediction_penalty,binned_position_test],f)
 
     
     # -----save sample theta(parameter) , prediction , test_data

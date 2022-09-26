@@ -1,8 +1,6 @@
 import pytest
 import numpy as np
-from Modules.decoder import linear_gaussian
-
-
+from modules.decoder import linear_gaussian_ridge
 
 n_neurons=30
 time_bins_train=100
@@ -24,11 +22,10 @@ def test_set():
     return design_matrix_test,binned_position_test
 
 def test_fit(train_set):
-    lg=linear_gaussian()
-    assert lg.fit(train_set[0],train_set[1]).any()
+    lgr=linear_gaussian_ridge()
+    assert lgr.fit(train_set[0],train_set[1],penalty=1).any()
 
 def test_predict(train_set,test_set):
-    lg=linear_gaussian()
-    lg.fit(train_set[0],train_set[1])
-    assert lg.predict(test_set[0]).any()
-
+    lgr=linear_gaussian_ridge()
+    lgr.fit(train_set[0],train_set[1],penalty=1)
+    assert lgr.predict(test_set[0]).any()
