@@ -108,7 +108,7 @@ if __name__=="__main__":
             theta_prediction_penalty.append([theta,prediction,p])
 
         # save theta(parameter) , prediction , test_data
-        with open(output_dir/(f"lg_predict_{data_name}.pickle"),"wb") as f:
+        with open(output_dir/(f"lgr_predict_{data_name}.pickle"),"wb") as f:
             pickle.dump([theta_prediction_penalty,binned_position_test],f)
 
     
