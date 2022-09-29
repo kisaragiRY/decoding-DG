@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 from scipy.linalg import hankel
+from pathlib import Path
  
 def data_loader(data_dir):
     '''
@@ -26,7 +27,7 @@ def bin_pos(position,num_par=2,type="grid"):
     discretized number like 1,2,3...
     parameters:
     position: original position data which is in a range of [0 pixel,200 pixels]
-    num_par: discretize position x-axis(y-axis) into how many parts, it has to be even
+    num_par: discretize position x-axis/y-axis into how many parts
     type: the way to discretize data; vertical, horizontal, default:grid
     '''
     OF_size=200 # open field size
@@ -40,7 +41,7 @@ def bin_pos(position,num_par=2,type="grid"):
     binned_position=np.zeros(num_time_bins)
     for t in range(num_time_bins):
         x,y=binned_position_x[t],binned_position_y[t]
-        binned_position[t]=x*(num_par-1)+y
+        binned_position[t]=(x-1)*num_par+y
     
     return binned_position
 
@@ -81,14 +82,27 @@ def design_matrix_decoder(spikes):
     return design_mat_all_offset
 
 
-def cal_mse(prediction,observed):
-    tmp=[(i-j)**2 for i,j in zip(prediction,observed)]
+def cal_mse(prediction,observation):
+    '''
+    calculate the MSE based on prediction,observation
+    '''
+    tmp=[(i-j)**2 for i,j in zip(prediction,observation)]
+    return np.sum(tmp)/len(prediction)
+
+def cal_mae(prediction,observation):
+    '''
+    calculate the MAE based on prediction,observation
+    '''
+    if (prediction).all()==np.nan:
+        tmp=np.nan
+    else:
+        tmp=[np.abs(i-j)for i,j in zip(prediction,observation)]
     return np.sum(tmp)/len(prediction)
 
 
 if __name__=="__main__":
-    data_dir='Modules/data/alldata/'
+    data_dir=Path('data/alldata/')
     datalist=os.listdir(data_dir)
-    data_name=data_dir+datalist[0]
+    data_name=data_dir/datalist[0]
     position,spike=data_loader(data_name)
     print(bin_pos(position))

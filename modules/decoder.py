@@ -54,6 +54,7 @@ class linear_gaussian_ridge():
         tmp2=np.einsum("ji,ik->jk",design_matrix_train.T,binned_position_train)
         self.theta= np.einsum("ji,ik->j",inv(tmp1+penalty*np.identity(len(tmp1))),tmp2)
         return self.theta
+
     def predict(self,design_matrix_test:np.array):
         '''
         predicting based on test data
@@ -63,6 +64,8 @@ class linear_gaussian_ridge():
 
 if __name__=="__main__":
     import matplotlib.pyplot as plt
+
+    decoder_m="linear gaussian ridge" # decoder method
 
     all_data_dir=Path('data/alldata/')
     datalist=[x for x in all_data_dir.iterdir()]
@@ -95,24 +98,44 @@ if __name__=="__main__":
         design_mat_train, binned_position_train = design_mat_all[:n_time_bins_train] , binned_position[:n_time_bins_train].reshape(-1,1)
         design_mat_test, binned_position_test = design_mat_all[n_time_bins_train:] , binned_position[n_time_bins_train:].reshape(-1,1)
 
-        theta_prediction_penalty=[]
-        for p in range(10):
-            lgr=linear_gaussian_ridge()
+        if decoder_m=="linear gaussian": # ----this is only for two samples data(control & camkII)
+            sample_name=data_name
+            sample_type = "CaMKII" if "CaMKII" in sample_name else "Control"
+            lg=linear_gaussian()
             try: 
-                theta=lgr.fit(design_mat_train, binned_position_train,p)
-                prediction=lgr.predict(design_mat_test)
+                theta=lg.fit(design_mat_train, binned_position_train)
+                prediction=lg.predict(design_mat_test)
             except:
                 print("fitting failed")
-                theta=np.nan
-                prediction=np.nan
-            theta_prediction_penalty.append([theta,prediction,p])
+                theta=[np.nan]*design_mat_train.shape[1]
+                prediction=[np.nan]*len(binned_position_test)
+            # -----save sample theta(parameter) , prediction , test_data
+            with open(output_dir/(f"lg_predict_{sample_type}.pickle"),"wb") as f:
+                pickle.dump([theta,prediction,binned_position_test],f)
 
-        # save theta(parameter) , prediction , test_data
-        with open(output_dir/(f"lgr_predict_{data_name}.pickle"),"wb") as f:
-            pickle.dump([theta_prediction_penalty,binned_position_test],f)
+        elif decoder_m=="linear gaussian ridge":
+            theta_prediction_penalty=[]
+            failed_penalty=[]
+            # for p in range(10):
+            for p in [2**i for i in range(3,13)]:
+                lgr=linear_gaussian_ridge()
+                try: 
+                    theta=lgr.fit(design_mat_train, binned_position_train,p)
+                    prediction=lgr.predict(design_mat_test)
+                    prediction_train=lgr.predict(design_mat_train)
+                except:
+                    print("fitting failed")
+                    failed_penalty.append(p)
+                    # if fitting failed, set the following variables to np.nan
+                    theta=np.array([np.nan]*design_mat_train.shape[1])
+                    prediction=np.array([np.nan]*len(binned_position_test))
+                    prediction_train=np.array([np.nan]*len(binned_position_test))
+                theta_prediction_penalty.append([theta,prediction,prediction_train,p])
+
+            # save theta(parameter) , prediction , test_data
+            # with open(output_dir/(f"lgr_predict_{data_name}.pickle"),"wb") as f:
+            with open(output_dir/(f"lgr_predict_{data_name}_withLargerPenalty.pickle"),"wb") as f:
+                pickle.dump([theta_prediction_penalty,binned_position_test,binned_position_train,failed_penalty],f)
 
     
-    # -----save sample theta(parameter) , prediction , test_data
-    # with open(output_dir/(f"lg_predict_{sample_type}.pickle"),"wb") as f:
-    #     pickle.dump([theta,prediction,binned_position_test],f)
 
