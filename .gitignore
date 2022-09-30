@@ -1,8 +1,11 @@
-Modules/data
+data
 .venv
 .DS_Store
 ._.DS_Store
+**/__pycache__
 
 data_RGCs/
 TestProjects/
 ._data_RGCs
+
+output/data
