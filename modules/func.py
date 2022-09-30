@@ -21,17 +21,24 @@ def data_loader(data_dir):
 
     return position,spikes
     
-def bin_pos(position,num_par=2,type="grid"):
+def bin_pos(position,num_par=2,partition_type="grid"):
     '''
     discretize position, turn x,y axis positoin data from continuous number to 
     discretized number like 1,2,3...
     parameters:
     position: original position data which is in a range of [0 pixel,200 pixels]
     num_par: discretize position x-axis/y-axis into how many parts
-    type: the way to discretize data; vertical, horizontal, default:grid
+    partition_type: the way to discretize data; vertical(II), horizontal(二), default:grid
     '''
     OF_size=200 # open field size
     bin_edges=np.linspace(0,OF_size,int(num_par)+1)
+
+    if partition_type=="vertical":
+        binned_position_x=np.digitize(position[:,0],bin_edges)
+        return binned_position_x
+    if partition_type=="horizontal":
+        binned_position_y=np.digitize(position[:,1],bin_edges)
+        return binned_position_y
 
     num_time_bins=len(position) # number of time bins
 
