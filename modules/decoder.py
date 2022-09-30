@@ -66,6 +66,8 @@ if __name__=="__main__":
     import matplotlib.pyplot as plt
 
     decoder_m="linear gaussian ridge" # decoder method
+    partition_type="vertical"
+    n_parts=4
 
     all_data_dir=Path('data/alldata/')
     datalist=[x for x in all_data_dir.iterdir()]
@@ -86,7 +88,8 @@ if __name__=="__main__":
         data_name=str(data_dir).split('/')[-1]
         position,spikes=data_loader(data_dir) # load data
 
-        binned_position=bin_pos(position)
+        # binned_position=bin_pos(position,n_parts,partition_type)
+        binned_position=position
         time_bin_size=1/3 #second
         num_time_bins,num_cells = spikes.shape
 
@@ -134,7 +137,8 @@ if __name__=="__main__":
 
             # save theta(parameter) , prediction , test_data
             # with open(output_dir/(f"lgr_predict_{data_name}.pickle"),"wb") as f:
-            with open(output_dir/(f"lgr_predict_{data_name}_withLargerPenalty.pickle"),"wb") as f:
+            # with open(output_dir/(f"lgr_predict_{data_name}_withLargerPenalty_{n_parts}_{partition_type}.pickle"),"wb") as f:
+            with open(output_dir/(f"lgr_predict_{data_name}_withoutPartition.pickle"),"wb") as f:
                 pickle.dump([theta_prediction_penalty,binned_position_test,binned_position_train,failed_penalty],f)
 
     
