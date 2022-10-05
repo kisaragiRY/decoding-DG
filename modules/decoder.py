@@ -6,7 +6,7 @@ import pickle
 from func import *
 from tqdm import tqdm
 
-class linear_gaussian():
+class LinearRegression():
     '''
     a linear guassian model
     x_t=theta.T・n_t + b_t
@@ -33,7 +33,7 @@ class linear_gaussian():
         '''
         return np.einsum("ij,j->i",design_matrix_test,self.theta)
 
-class Ridge_regression():
+class RidgeRegression():
     '''A linear guassian ridge model.
 
     x_t=theta.T・n_t + b_t
@@ -80,7 +80,8 @@ class Ridge_regression():
 if __name__=="__main__":
     import matplotlib.pyplot as plt
 
-    decoder_m="linear gaussian ridge" # decoder method
+    #----variables
+    decoder_m="ridge regression" # decoder method
     partition_type="vertical"
     n_parts=4
 
@@ -101,14 +102,14 @@ if __name__=="__main__":
 
     for data_dir in tqdm(datalist):
         data_name=str(data_dir).split('/')[-1]
-        position,spikes=data_loader(data_dir) # load data
+        position,spikes=load_data(data_dir) # load data
 
         # binned_position=bin_pos(position,n_parts,partition_type)
         binned_position=position
         time_bin_size=1/3 #second
         num_time_bins,num_cells = spikes.shape
 
-        design_mat_all=design_matrix_decoder(spikes)
+        design_mat_all=mk_design_matrix_decoder(spikes)
 
         # split traina and test
         n_time_bins_train=int(num_time_bins/2)
@@ -116,7 +117,7 @@ if __name__=="__main__":
         design_mat_train, binned_position_train = design_mat_all[:n_time_bins_train] , binned_position[:n_time_bins_train].reshape(-1,1)
         design_mat_test, binned_position_test = design_mat_all[n_time_bins_train:] , binned_position[n_time_bins_train:].reshape(-1,1)
 
-        if decoder_m=="linear gaussian": # ----this is only for two samples data(control & camkII)
+        if decoder_m=="linear regression": # ----this is only for two samples data(control & camkII)
             sample_name=data_name
             sample_type = "CaMKII" if "CaMKII" in sample_name else "Control"
             lg=linear_gaussian()
@@ -131,12 +132,12 @@ if __name__=="__main__":
             with open(output_dir/(f"lg_predict_{sample_type}.pickle"),"wb") as f:
                 pickle.dump([theta,prediction,binned_position_test],f)
 
-        elif decoder_m=="linear gaussian ridge":
+        elif decoder_m=="ridge regression":
             theta_prediction_penalty=[]
             failed_penalty=[]
             # for p in range(10):
             for p in [2**i for i in range(3,13)]:
-                lgr=Ridge_regression()
+                lgr=RidgeRegression()
                 try: 
                     theta=lgr.fit(design_mat_train, binned_position_train,p)
                     prediction=lgr.predict(design_mat_test)
