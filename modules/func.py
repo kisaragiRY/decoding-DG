@@ -4,7 +4,7 @@ import numpy as np
 from scipy.linalg import hankel
 from pathlib import Path
  
-def data_loader(data_dir):
+def load_data(data_dir):
     '''
     load positiona and spike data
     '''
@@ -53,7 +53,7 @@ def bin_pos(position,num_par=2,partition_type="grid"):
     return binned_position
 
 
-def design_matrix_encoder(binned_position,spikes,ntfilt,nthist):
+def mk_design_matrix_encoder(binned_position,spikes,ntfilt,nthist):
     '''
     to construct design matrix for GLM encoder
 
@@ -79,7 +79,7 @@ def design_matrix_encoder(binned_position,spikes,ntfilt,nthist):
 
     return design_mat_all_offset
 
-def design_matrix_decoder(spikes):
+def mk_design_matrix_decoder(spikes):
     '''
     to construct design matrix for linear gaussian decoder
     '''
@@ -127,8 +127,5 @@ def cal_mae(prediction,observation):
 
 
 if __name__=="__main__":
-    data_dir=Path('data/alldata/')
-    datalist=os.listdir(data_dir)
-    data_name=data_dir/datalist[0]
-    position,spike=data_loader(data_name)
-    print(bin_pos(position))
+    """
+    """
