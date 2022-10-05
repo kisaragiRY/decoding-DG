@@ -88,6 +88,25 @@ def design_matrix_decoder(spikes):
     design_mat_all_offset = np.hstack((np.ones((num_time_bins,1)), spikes))
     return design_mat_all_offset
 
+def mk_design_matrix_hist(spikes:np.array,nthist:int):
+    """Make design matrix with spike history.
+
+    Parameter:
+    ----------
+    spikes: np.array
+        that has neurons's spike counts data.
+    nthist: int
+        num of time bins for spike history
+    """
+    n_time_bins,n_neurons = spikes.shape
+    design_mat_hist=np.zeros((n_time_bins,nthist,n_neurons))
+    for neuron in range(n_neurons):
+         design_mat_hist[:,:,neuron]=hankel(spikes[:-nthist+1,neuron],spikes[-nthist:,neuron])
+    design_mat_hist= design_mat_hist.reshape(n_time_bins,-1,order='F')
+    design_mat_all_offset = np.hstack((np.ones((n_time_bins,1)), design_mat_hist))
+    return design_mat_all_offset
+        
+
 
 def cal_mse(prediction,observation):
     '''
