@@ -79,24 +79,15 @@ def mk_design_matrix_encoder(binned_position,spikes,ntfilt,nthist):
 
     return design_mat_all_offset
 
-def mk_design_matrix_decoder(spikes):
-    '''
-    to construct design matrix for linear gaussian decoder
-    '''
-    num_time_bins,_ = spikes.shape
-    # add offset
-    design_mat_all_offset = np.hstack((np.ones((num_time_bins,1)), spikes))
-    return design_mat_all_offset
-
-def mk_design_matrix_hist(spikes:np.array,nthist:int):
-    """Make design matrix with spike history.
+def mk_design_matrix_hist(spikes:np.array,nthist:int=0):
+    """Make design matrix with spike history for decoder.
 
     Parameter:
     ----------
     spikes: np.array
         that has neurons's spike counts data.
     nthist: int
-        num of time bins for spike history
+        num of time bins for spike history,default=0
     """
     n_time_bins,n_neurons = spikes.shape
     design_mat_hist=np.zeros((n_time_bins,nthist,n_neurons))
