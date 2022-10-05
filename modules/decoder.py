@@ -34,8 +34,8 @@ class linear_gaussian():
         return np.einsum("ij,j->i",design_matrix_test,self.theta)
 
 class linear_gaussian_ridge():
-    '''
-    a linear guassian ridge model
+    '''A linear guassian ridge model.
+
     x_t=theta.T・n_t + b_t
     x_t: discretized position
     theta: parameter
@@ -46,9 +46,18 @@ class linear_gaussian_ridge():
         pass
 
     def fit(self,design_matrix_train:np.array,binned_position_train:np.array,penalty:float):
-        '''
-        fitting based on training data
+        '''Fitting based on training data.
+        
         return the fitted coefficients
+
+        Parameter:
+        ---------
+        design_matrix_train: np.array
+            train design matrix including one column full of 1 for the intercept
+        binned_position_train: np.array
+            discretized position from continuous coordinates to discrete value 1,2,3...
+        penalty: float
+            the penalty added on ridge model
         '''
         tmp1=np.einsum("ji,ik->jk",design_matrix_train.T,design_matrix_train)
         tmp2=np.einsum("ji,ik->jk",design_matrix_train.T,binned_position_train)
@@ -56,9 +65,15 @@ class linear_gaussian_ridge():
         return self.theta
 
     def predict(self,design_matrix_test:np.array):
-        '''
-        predicting based on test data
+        '''Predicting using fitted parameters based on test data.
+        
         return the predicted results
+
+        Parameter:
+        ---------
+        design_matrix_test: np.array
+            test design matrix including one column full of 1 for the intercept
+
         '''
         return np.einsum("ij,j->i",design_matrix_test,self.theta)
 
