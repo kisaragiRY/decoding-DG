@@ -33,7 +33,7 @@ class linear_gaussian():
         '''
         return np.einsum("ij,j->i",design_matrix_test,self.theta)
 
-class linear_gaussian_ridge():
+class Ridge_regression():
     '''A linear guassian ridge model.
 
     x_t=theta.T・n_t + b_t
@@ -136,7 +136,7 @@ if __name__=="__main__":
             failed_penalty=[]
             # for p in range(10):
             for p in [2**i for i in range(3,13)]:
-                lgr=linear_gaussian_ridge()
+                lgr=Ridge_regression()
                 try: 
                     theta=lgr.fit(design_mat_train, binned_position_train,p)
                     prediction=lgr.predict(design_mat_test)
