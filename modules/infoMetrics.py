@@ -4,18 +4,19 @@ import pandas as pd
 class InfoMetrics():
     """Calculate the mutual information between spikes and binned position.
     """
-    def __init__(self,spikes:np.array,binned_position:np.array) -> None:
+    def __init__(self,spikes:np.array,status:np.array) -> None:
         """Initialization.
 
         Parameter:
         ---------
         spikes: np.array
             neuorns spike count data
-        binned_position:np.array
-            discretized position from continuous coordinates to discrete value 1,2,3...
+        status:np.array
+            can be discretized position from continuous coordinates to discrete value 1,2,3...
+            or discretized direction, discretized speed
         """
         self.spikes=spikes
-        self.status=binned_position
+        self.status=status
     
     def concat_data(self):
         """Concatenate status and spikes and return a dataframe
@@ -61,3 +62,37 @@ class InfoMetrics():
                 I+=p_sk*log
 
         return  I
+
+if __name__=="__main__":
+    #----------Calculate mutual information(MI) and multi multual information(MMI)----------
+
+    from pathlib import Path
+    from tqdm import tqdm
+    from modules.func import *
+
+    all_data_dir=Path('data/alldata/') # data directory
+    datalist=[x for x in all_data_dir.iterdir()] # get the list of files under the data directory
+
+    output_dir=Path("output/data/info_metrics/") # setup the output directory
+    if not output_dir.exists():
+        output_dir.mkdir()
+
+    #----variables for patitioning the open filed
+    partition_type="vertical"  # how to divide the open filed, possible options: vertical, horizontal, grid
+    
+    for data_dir in tqdm(datalist):
+        data_name=str(data_dir).split('/')[-1]
+        position,spikes=load_data(data_dir) # load data
+        
+        time_bin_size=1/3 #second
+        num_time_bins,num_cells = spikes.shape
+
+        I_list=[] # the information list for each n_parts choices
+        for n_parts in range(3,21): # n_parts: how many parts be divided
+            binned_position=bin_pos(position,n_parts,partition_type)
+            info_metrics=InfoMetrics(spikes,binned_position)
+            I_list.append(info_metrics.cal_mutual_information())
+
+
+
+        
