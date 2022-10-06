@@ -15,7 +15,7 @@ def data_set():
     return spikes,binned_position_train
 
 def test_cal_mi(data_set):
-    """Test cal_mutual_information() in InfoMetrics class.
+    """Test cal_mutual_info() in InfoMetrics class.
     """
-    info_metrics=InfoMetrics(data_set[1],data_set[0])
-    assert info_metrics.cal_mutual_information()
+    info_metrics=InfoMetrics(spikes=data_set[0],status=data_set[1])
+    assert info_metrics.cal_mutual_info(0)

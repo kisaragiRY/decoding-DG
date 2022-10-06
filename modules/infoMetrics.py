@@ -16,17 +16,17 @@ class InfoMetrics():
             or discretized direction, discretized speed
         """
         self.spikes=spikes
-        self.status=status
+        self.status=status.reshape(-1,1)
     
-    def concat_data(self):
+    def concat_data(self,nueron_id):
         """Concatenate status and spikes and return a dataframe
         """
-        self.status_spikes=pd.DataFrame(np.hstack((self.status,self.spikes)))
+        self.status_spikes=pd.DataFrame(np.hstack((self.status,self.spikes[:,nueron_id].reshape(-1,1))))
 
-    def cal_mutual_information(self)->float:
+    def cal_mutual_info(self,nueron_id)->float:
         """Calculate the mutual information between spikes and binned position.
         """
-        self.concat_data()
+        self.concat_data(nueron_id)
         time=len(self.status_spikes)
         I=0
         for row in self.status_spikes.drop_duplicates().iterrows():
@@ -36,8 +36,11 @@ class InfoMetrics():
             p_s=self.status_spikes[(self.status_spikes.iloc[:,1]==k)].count()[0]/time
             p_k=self.status_spikes[(self.status_spikes.iloc[:,0]==s)].count()[0]/time
 
-            log=np.log2(p_sk/(p_s*p_k))
-            I+=p_sk*log
+            if p_sk==0:
+                I+=0
+            else:
+                log=np.log2(p_sk/(p_s*p_k))
+                I+=p_sk*log
 
         return  I
 
@@ -68,7 +71,8 @@ if __name__=="__main__":
 
     from pathlib import Path
     from tqdm import tqdm
-    from modules.func import *
+    from func import *
+    import pickle
 
     all_data_dir=Path('data/alldata/') # data directory
     datalist=[x for x in all_data_dir.iterdir()] # get the list of files under the data directory
@@ -85,13 +89,22 @@ if __name__=="__main__":
         position,spikes=load_data(data_dir) # load data
         
         time_bin_size=1/3 #second
-        num_time_bins,num_cells = spikes.shape
+        n_time_bins,n_neuorns = spikes.shape
 
-        I_list=[] # the information list for each n_parts choices
-        for n_parts in range(3,21): # n_parts: how many parts be divided
-            binned_position=bin_pos(position,n_parts,partition_type)
-            info_metrics=InfoMetrics(spikes,binned_position)
-            I_list.append(info_metrics.cal_mutual_information())
+        n_neurons_range=range(n_neuorns) # n_parts range
+        n_parts_range=range(2,30)
+
+        I_nParts_list=[] # the information list for each n_parts choices
+        for n_parts in n_neurons_range: # n_parts: how many parts be divided
+            I_Neurons_list=[] # the information list for each neuron
+            for neuron_id in n_neurons_range: # neuron_id: which neuron to use to calculating MI
+                binned_position=bin_pos(position,n_parts,partition_type)
+                info_metrics=InfoMetrics(spikes,binned_position)
+                I_Neurons_list.append(info_metrics.cal_mutual_info(neuron_id))
+            I_nParts_list.append(np.array(I_Neurons_list))
+
+        with open(output_dir/f"info_MI_nNeurons_nParts_{partition_type}_{data_name}", "wb") as f:
+            pickle.dump((np.array(I_nParts_list),n_neurons_range,n_neurons_range),f)
 
 
 
