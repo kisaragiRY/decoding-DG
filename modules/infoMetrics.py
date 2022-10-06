@@ -21,12 +21,12 @@ class InfoMetrics():
     def concat_data(self):
         """Concatenate status and spikes and return a dataframe
         """
-        self.status_spikes=pd.DataFrame(np.hstack(self.status,self.spikes))
+        self.status_spikes=pd.DataFrame(np.hstack((self.status,self.spikes)))
 
     def cal_mutual_information(self)->float:
         """Calculate the mutual information between spikes and binned position.
         """
-
+        self.concat_data()
         time=len(self.status_spikes)
         I=0
         for row in self.status_spikes.drop_duplicates().iterrows():
