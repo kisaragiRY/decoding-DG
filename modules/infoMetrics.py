@@ -82,29 +82,29 @@ if __name__=="__main__":
         output_dir.mkdir()
 
     #----variables for patitioning the open filed
-    partition_type="vertical"  # how to divide the open filed, possible options: vertical, horizontal, grid
-    
-    for data_dir in tqdm(datalist):
-        data_name=str(data_dir).split('/')[-1]
-        position,spikes=load_data(data_dir) # load data
-        
-        time_bin_size=1/3 #second
-        n_time_bins,n_neuorns = spikes.shape
+    partition_types=["vertical","horizontal"] # how to divide the open filed, possible options: vertical, horizontal, grid
+    for partition_type in partition_types:
+        for data_dir in tqdm(datalist):
+            data_name=str(data_dir).split('/')[-1]
+            position,spikes=load_data(data_dir) # load data
+            
+            time_bin_size=1/3 #second
+            n_time_bins,n_neuorns = spikes.shape
 
-        n_neurons_range=range(n_neuorns) # n_parts range
-        n_parts_range=range(2,30)
+            n_neurons_range=range(n_neuorns) # n_parts range
+            n_parts_range=range(2,40)
 
-        I_nParts_list=[] # the information list for each n_parts choices
-        for n_parts in n_neurons_range: # n_parts: how many parts be divided
-            I_Neurons_list=[] # the information list for each neuron
-            for neuron_id in n_neurons_range: # neuron_id: which neuron to use to calculating MI
-                binned_position=bin_pos(position,n_parts,partition_type)
-                info_metrics=InfoMetrics(spikes,binned_position)
-                I_Neurons_list.append(info_metrics.cal_mutual_info(neuron_id))
-            I_nParts_list.append(np.array(I_Neurons_list))
+            I_nParts_list=[] # the information list for each n_parts choices
+            for n_parts in n_parts_range: # n_parts: how many parts be divided
+                I_Neurons_list=[] # the information list for each neuron
+                for neuron_id in n_neurons_range: # neuron_id: which neuron to use to calculating MI
+                    binned_position=bin_pos(position,n_parts,partition_type)
+                    info_metrics=InfoMetrics(spikes,binned_position)
+                    I_Neurons_list.append(info_metrics.cal_mutual_info(neuron_id))
+                I_nParts_list.append(np.array(I_Neurons_list))
 
-        with open(output_dir/f"info_MI_nNeurons_nParts_{partition_type}_{data_name}", "wb") as f:
-            pickle.dump((np.array(I_nParts_list),n_neurons_range,n_neurons_range),f)
+            with open(output_dir/f"info_MI_nNeurons_nParts_{partition_type}_{data_name}", "wb") as f:
+                pickle.dump((np.array(I_nParts_list),n_parts_range,n_neurons_range),f)
 
 
 
