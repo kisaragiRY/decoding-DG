@@ -64,6 +64,20 @@ class RidgeRegression():
         self.theta= np.einsum("ji,ik->j",inv(tmp1+penalty*np.identity(len(tmp1))),tmp2)
         return self.theta
 
+    def results(self):
+        """Contain RidgeRegression results.
+
+        Including fitted parameters and hypothesis tests.
+        """
+        def overall_sig(self):
+            """Run a hypothesis test for the overall coefficients in the model.
+            """
+        def indiv_sig(self):
+            """Run a hypothesis test for individual coefficients 
+            """
+        
+
+
     def predict(self,design_matrix_test:np.array):
         '''Predicting using fitted parameters based on test data.
         
@@ -120,7 +134,7 @@ if __name__=="__main__":
         if decoder_m=="linear regression": # ----this is only for two samples data(control & camkII)
             sample_name=data_name
             sample_type = "CaMKII" if "CaMKII" in sample_name else "Control"
-            lg=linear_gaussian()
+            lg=LinearRegression()
             try: 
                 theta=lg.fit(design_mat_train, binned_position_train)
                 prediction=lg.predict(design_mat_test)
