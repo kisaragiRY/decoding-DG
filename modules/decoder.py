@@ -1,14 +1,15 @@
-from turtle import pen
+from os import stat
 import numpy as np
 from scipy.linalg import inv
 from pathlib import Path
 import pickle
 from func import *
 from tqdm import tqdm
+from scipy import stats
 
 class LinearRegression():
-    '''
-    a linear guassian model
+    '''A linear guassian model.
+
     x_t=theta.T・n_t + b_t
     x_t: discretized position
     theta: parameter
@@ -59,24 +60,13 @@ class RidgeRegression():
         penalty: float
             the penalty added on ridge model
         '''
+        self.X_train=design_matrix_train
+        self.y_train=binned_position_train
+
         tmp1=np.einsum("ji,ik->jk",design_matrix_train.T,design_matrix_train)
         tmp2=np.einsum("ji,ik->jk",design_matrix_train.T,binned_position_train)
         self.theta= np.einsum("ji,ik->j",inv(tmp1+penalty*np.identity(len(tmp1))),tmp2)
         return self.theta
-
-    def results(self):
-        """Contain RidgeRegression results.
-
-        Including fitted parameters and hypothesis tests.
-        """
-        def overall_sig(self):
-            """Run a hypothesis test for the overall coefficients in the model.
-            """
-        def indiv_sig(self):
-            """Run a hypothesis test for individual coefficients 
-            """
-        
-
 
     def predict(self,design_matrix_test:np.array):
         '''Predicting using fitted parameters based on test data.
@@ -91,85 +81,57 @@ class RidgeRegression():
         '''
         return np.einsum("ij,j->i",design_matrix_test,self.theta)
 
-if __name__=="__main__":
-    import matplotlib.pyplot as plt
+class Results(RidgeRegression):
+    """Contain RidgeRegression results.
 
-    #----variables
-    decoder_m="ridge regression" # decoder method
-    partition_type="vertical"
-    n_parts=4
+    Including fitted parameters and hypothesis tests.
+    """
+    def __init__(self) -> None:
+        super().__init__()
 
-    all_data_dir=Path('data/alldata/')
-    datalist=[x for x in all_data_dir.iterdir()]
-    
-    # output_dir=Path("Output/data/linear_gaussian/")
-    output_dir=Path("output/data/linear_gaussian_ridge/")
-    if not output_dir.exists():
-        output_dir.mkdir()
+    def cal_overall_sig(self):
+        """Run a hypothesis test for the overall coefficients in the model.
 
-    # -----load sample data
-    # sample_data_index=1
-    # data_dir=datalist[sample_data_index]
-    # sample_name=str(data_dir).split('/')[-1]
-    # sample_type = "CaMKII" if "CaMKII" in sample_name else "Control"
-    # print(sample_name)
+        The statistics=[(ESS-RSS)/(p-1)] / [RSS/(n-p)] ~ F-distribution(p-1,n-p),
+        where ESS is explained sum of squares abd RSS is residual sum of squares.
+        """
+        n,p=self.X_train.shape
+        # Residual Sum of Squares=y'y-theta_hat'X'y
+        RSS=self.y_train.dot(self.y_train)-self.theta.dot(np.einsum("ji,ik->jk",self.X_train.T,self.y_train)) 
+        # Explained sum of squares=∑(y_i-y_bar)
+        ESS=np.sum(self.y_train-np.average(self.y_train))
+        # Statistics
+        F= ((ESS-RSS)/(p-1)) / (RSS/(n-p))
+        # get p-value from F-distribution
+        p_value=stats.f.sf(F,p-1,n-p)
 
-    for data_dir in tqdm(datalist):
-        data_name=str(data_dir).split('/')[-1]
-        position,spikes=load_data(data_dir) # load data
+        return p_value
 
-        # binned_position=bin_pos(position,n_parts,partition_type)
-        binned_position=position
-        time_bin_size=1/3 #second
-        num_time_bins,num_cells = spikes.shape
+    def cal_indiv_sig(self):
+        """Run a hypothesis test for individual coefficients 
 
-        design_mat_all=mk_design_matrix_decoder(spikes)
+        The statistics=t_i=theta_hat/(c_ii**.5 * sigma_hat) ~ t with n-p degree of freedom,
+        wheret heta_hat is the fitted parameter, c_ii is the diagnal elements of inv(X'X), 
+        sigma_hat**2=RSS/(n-p).
+        If |t_i|>t(alpha/2), refuse hypothesis.
+        """
+        n,p=self.X_train.shape
+        # Residual Sum of Squares=y'y-theta_hat'X'y
+        RSS=self.y_train.dot(self.y_train)-self.theta.dot(np.einsum("ji,ik->jk",self.X_train.T,self.y_train)) 
+        # inv(X'X)
+        C=inv(np.einsum("ji,ik->jk",self.X_train.T,self.X_train))
+        # sigma
+        sigma2=RSS/(n-p)
+        # list of t statistics for each element in theta_hat
+        t_list=[self.theta[i]/(C[i,i]*sigma2**.5) for i in range(len(self.theta))]
+        # p-value list based on the t_list
+        p_value_list=[stats.t.cdf(t,n-p) for t in t_list]
+        
+        return p_value_list
 
-        # split traina and test
-        n_time_bins_train=int(num_time_bins/2)
 
-        design_mat_train, binned_position_train = design_mat_all[:n_time_bins_train] , binned_position[:n_time_bins_train].reshape(-1,1)
-        design_mat_test, binned_position_test = design_mat_all[n_time_bins_train:] , binned_position[n_time_bins_train:].reshape(-1,1)
-
-        if decoder_m=="linear regression": # ----this is only for two samples data(control & camkII)
-            sample_name=data_name
-            sample_type = "CaMKII" if "CaMKII" in sample_name else "Control"
-            lg=LinearRegression()
-            try: 
-                theta=lg.fit(design_mat_train, binned_position_train)
-                prediction=lg.predict(design_mat_test)
-            except:
-                print("fitting failed")
-                theta=[np.nan]*design_mat_train.shape[1]
-                prediction=[np.nan]*len(binned_position_test)
-            # -----save sample theta(parameter) , prediction , test_data
-            with open(output_dir/(f"lg_predict_{sample_type}.pickle"),"wb") as f:
-                pickle.dump([theta,prediction,binned_position_test],f)
-
-        elif decoder_m=="ridge regression":
-            theta_prediction_penalty=[]
-            failed_penalty=[]
-            # for p in range(10):
-            for p in [2**i for i in range(3,13)]:
-                lgr=RidgeRegression()
-                try: 
-                    theta=lgr.fit(design_mat_train, binned_position_train,p)
-                    prediction=lgr.predict(design_mat_test)
-                    prediction_train=lgr.predict(design_mat_train)
-                except:
-                    print("fitting failed")
-                    failed_penalty.append(p)
-                    # if fitting failed, set the following variables to np.nan
-                    theta=np.array([np.nan]*design_mat_train.shape[1])
-                    prediction=np.array([np.nan]*len(binned_position_test))
-                    prediction_train=np.array([np.nan]*len(binned_position_test))
-                theta_prediction_penalty.append([theta,prediction,prediction_train,p])
-
-            # save theta(parameter) , prediction , test_data
-            # with open(output_dir/(f"lgr_predict_{data_name}.pickle"),"wb") as f:
-            # with open(output_dir/(f"lgr_predict_{data_name}_withLargerPenalty_{n_parts}_{partition_type}.pickle"),"wb") as f:
-            with open(output_dir/(f"lgr_predict_{data_name}_withoutPartition.pickle"),"wb") as f:
-                pickle.dump([theta_prediction_penalty,binned_position_test,binned_position_train,failed_penalty],f)
-
-    
-
+    def summary(self):
+        """The summary of hypothesis tests
+        """
+        self.overall_sig=self.cal_overall_sig()
+        self.individual_sig=self.cal_indiv_sig()
