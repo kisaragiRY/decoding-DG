@@ -16,6 +16,7 @@ openpyxl = "^3.0.10"
 statsmodels = "^0.13.2"
 ipykernel = "^6.15.3"
 tqdm = "^4.64.1"
+pre-commit = "^2.20.0"
 
 
 [build-system]
