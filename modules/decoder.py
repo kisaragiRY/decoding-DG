@@ -3,7 +3,7 @@ import numpy as np
 from scipy.linalg import inv
 from pathlib import Path
 import pickle
-from func import *
+from .func import *
 from tqdm import tqdm
 from scipy import stats
 
@@ -62,11 +62,11 @@ class RidgeRegression():
         '''
         self.X_train=design_matrix_train
         self.y_train=binned_position_train
+        self.penalty=penalty
 
         tmp1=np.einsum("ji,ik->jk",design_matrix_train.T,design_matrix_train)
         tmp2=np.einsum("ji,ik->jk",design_matrix_train.T,binned_position_train)
         self.theta= np.einsum("ji,ik->j",inv(tmp1+penalty*np.identity(len(tmp1))),tmp2)
-        return self.theta
 
     def predict(self,design_matrix_test:np.array):
         '''Predicting using fitted parameters based on test data.
@@ -79,7 +79,8 @@ class RidgeRegression():
             test design matrix including one column full of 1 for the intercept
 
         '''
-        return np.einsum("ij,j->i",design_matrix_test,self.theta)
+        self.X_test=design_matrix_test
+        self.prediction=np.einsum("ij,j->i",self.X_test,self.theta)
 
 class Results(RidgeRegression):
     """Contain RidgeRegression results.
@@ -105,7 +106,7 @@ class Results(RidgeRegression):
         # get p-value from F-distribution
         p_value=stats.f.sf(F,p-1,n-p)
 
-        return p_value
+        self.overall_sig= p_value
 
     def cal_indiv_sig(self):
         """Run a hypothesis test for individual coefficients 
@@ -127,11 +128,19 @@ class Results(RidgeRegression):
         # p-value list based on the t_list
         p_value_list=[stats.t.cdf(t,n-p) for t in t_list]
         
-        return p_value_list
+        self.individual_sig= p_value_list
 
 
     def summary(self):
         """The summary of hypothesis tests
         """
-        self.overall_sig=self.cal_overall_sig()
-        self.individual_sig=self.cal_indiv_sig()
+        self.model={
+            "model name": "Ridge Refression",
+            "penalty":self.penalty,
+            "fitted error":cal_mae(self.predict(self.X_train),self.y_train),
+            "fitted parameter":self.theta,
+            "overall sig":self.overall_sig,
+            "individual sig":self.individual_sig,
+            "prediction":self.prediction,
+        }
+        return self.model
