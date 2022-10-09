@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 from scipy.linalg import hankel
 from pathlib import Path
+
+from zmq import Errno
  
 def load_data(data_dir):
     '''
@@ -90,13 +92,18 @@ def mk_design_matrix_decoder(spikes:np.array,nthist:int=0):
         num of time bins for spike history,default=0
     """
     n_time_bins,n_neurons = spikes.shape
-    design_mat_hist=np.zeros((n_time_bins,nthist,n_neurons))
-    for neuron in range(n_neurons):
-         design_mat_hist[:,:,neuron]=hankel(spikes[:-nthist+1,neuron],spikes[-nthist:,neuron])
-    design_mat_hist= design_mat_hist.reshape(n_time_bins,-1,order='F')
-    design_mat_all_offset = np.hstack((np.ones((n_time_bins,1)), design_mat_hist))
+    if nthist>1:
+        new_dm_len=n_time_bins-nthist+1 # length of the design matrix would reduce after intoducing nthist
+        design_mat_hist=np.zeros((new_dm_len,nthist,n_neurons))
+        for neuron in range(n_neurons):
+            design_mat_hist[:,:,neuron]=hankel(spikes[:-nthist+1,neuron],spikes[-nthist:,neuron]) 
+        design_mat_hist= design_mat_hist.reshape(new_dm_len,-1,order='F')
+        design_mat_all_offset = np.hstack((np.ones((new_dm_len,1)), design_mat_hist))
+    elif nthist==0:
+        design_mat_all_offset = np.hstack((np.ones((n_time_bins,1)), spikes))
+    else:
+        raise ValueError("Invalid Value: nthis shoudl be larger than 1 or equal to 0")
     return design_mat_all_offset
-        
 
 
 def cal_mse(prediction,observation):
@@ -120,3 +127,25 @@ def cal_mae(prediction,observation):
 if __name__=="__main__":
     """
     """
+    # data dir
+    all_data_dir=Path('data/alldata/')
+    datalist=[x for x in all_data_dir.iterdir()]
+
+    # get the regression results for all the mice
+    data_dir=datalist[0]
+    data_name=str(data_dir).split('/')[-1]
+    _,spikes=load_data(data_dir) # load data
+
+    # binned_position=bin_pos(position,n_parts,partition_type)
+    time_bin_size=1/3 #second
+    n_time_bins,n_cells = spikes.shape
+
+    design_mat_all=mk_design_matrix_decoder(spikes,2)
+
+
+#%%
+import numpy as np
+from scipy.linalg import hankel
+m=np.arange(24).reshape(4,6)
+hankel(m[:-3+1,1],m[-3:,1])
+#%%
