@@ -3,7 +3,7 @@ import numpy as np
 from scipy.linalg import inv
 from pathlib import Path
 import pickle
-from .func import *
+from func import *
 from tqdm import tqdm
 from scipy import stats
 
@@ -61,14 +61,19 @@ class RidgeRegression():
             the penalty added on ridge model
         '''
         self.X_train=design_matrix_train
-        self.y_train=binned_position_train
+        self.y_train=binned_position_train.reshape(-1,1)
         self.penalty=penalty
 
-        tmp1=np.einsum("ji,ik->jk",design_matrix_train.T,design_matrix_train)
-        tmp2=np.einsum("ji,ik->jk",design_matrix_train.T,binned_position_train)
-        self.theta= np.einsum("ji,ik->j",inv(tmp1+penalty*np.identity(len(tmp1))),tmp2)
+        tmp1=np.einsum("ji,ik->jk",self.X_train.T,self.X_train)
+        tmp2=np.einsum("ji,ik->jk",self.X_train.T,self.y_train)
+        try: 
+            inv(tmp1+penalty*np.identity(len(tmp1)))
+            self.theta= np.einsum("ji,ik->j",inv(tmp1+penalty*np.identity(len(tmp1))),tmp2)
 
-    def predict(self,design_matrix_test:np.array):
+        except: 
+            self.theta= np.array([np.nan]*self.X_train.shape[1])
+
+    def predict(self,X_test:np.array):
         '''Predicting using fitted parameters based on test data.
         
         return the predicted results
@@ -79,16 +84,21 @@ class RidgeRegression():
             test design matrix including one column full of 1 for the intercept
 
         '''
-        self.X_test=design_matrix_test
-        self.prediction=np.einsum("ij,j->i",self.X_test,self.theta)
+        self.prediction=np.einsum("ij,j->i",X_test,self.theta)
 
-class Results(RidgeRegression):
+class Results():
     """Contain RidgeRegression results.
 
     Including fitted parameters and hypothesis tests.
     """
-    def __init__(self) -> None:
+    def __init__(self,model) -> None:
         super().__init__()
+        self.penalty=model.penalty
+        self.X_train=model.X_train
+        self.y_train=model.y_train
+        self.theta=model.theta
+        self.prediction=model.prediction
+
 
     def cal_overall_sig(self):
         """Run a hypothesis test for the overall coefficients in the model.
@@ -98,7 +108,7 @@ class Results(RidgeRegression):
         """
         n,p=self.X_train.shape
         # Residual Sum of Squares=y'y-theta_hat'X'y
-        RSS=self.y_train.dot(self.y_train)-self.theta.dot(np.einsum("ji,ik->jk",self.X_train.T,self.y_train)) 
+        RSS=np.einsum("ji,ik->jk",self.y_train.T,self.y_train)-self.theta.dot(np.einsum("ji,ik->jk",self.X_train.T,self.y_train)) 
         # Explained sum of squares=∑(y_i-y_bar)
         ESS=np.sum(self.y_train-np.average(self.y_train))
         # Statistics
@@ -118,9 +128,13 @@ class Results(RidgeRegression):
         """
         n,p=self.X_train.shape
         # Residual Sum of Squares=y'y-theta_hat'X'y
-        RSS=self.y_train.dot(self.y_train)-self.theta.dot(np.einsum("ji,ik->jk",self.X_train.T,self.y_train)) 
+        RSS=np.einsum("ji,ik->jk",self.y_train.T,self.y_train)-self.theta.dot(np.einsum("ji,ik->jk",self.X_train.T,self.y_train)) 
         # inv(X'X)
-        C=inv(np.einsum("ji,ik->jk",self.X_train.T,self.X_train))
+        try: C=inv(np.einsum("ji,ik->jk",self.X_train.T,self.X_train))
+        except: 
+            self.individual_sig= np.array([np.nan]*len(self.theta))
+            return
+
         # sigma
         sigma2=RSS/(n-p)
         # list of t statistics for each element in theta_hat
@@ -134,13 +148,15 @@ class Results(RidgeRegression):
     def summary(self):
         """The summary of hypothesis tests
         """
-        self.model={
+        self.cal_overall_sig()
+        self.cal_indiv_sig()
+        smry={
             "model name": "Ridge Refression",
             "penalty":self.penalty,
-            "fitted error":cal_mae(self.predict(self.X_train),self.y_train),
             "fitted parameter":self.theta,
+            "fitted error":cal_mae(np.einsum("ij,j->i",self.X_train,self.theta),self.y_train),
             "overall sig":self.overall_sig,
             "individual sig":self.individual_sig,
             "prediction":self.prediction,
         }
-        return self.model
+        return smry
