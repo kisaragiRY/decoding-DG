@@ -5,7 +5,7 @@ from tqdm import tqdm
 import pickle
 
 #----variables
-partition_type="vertical"
+partition_type="horizontal"
 n_parts=4
 
 # data dir
@@ -40,23 +40,19 @@ for data_dir in tqdm(datalist):
     #     X_train_all[:,:,origin],y_train_all[:,:,origin]= design_mat_all[origin:origin+train_size] , binned_position[origin:origin+train_size].reshape(-1,1)
     #     X_test_all[:,:,origin], y_test_all[:,:,origin]= design_mat_all[origin+train_size+1] , binned_position[origin+train_size+1].reshape(-1,1)
 
-    X_train,X_test=design_mat_all[:train_size],binned_position[:train_size]
-    y_train,y_test=design_mat_all[train_size:],binned_position[train_size:]
+    X_train,y_train=design_mat_all[:train_size],binned_position[:train_size]
+    X_test,y_test=design_mat_all[train_size:],binned_position[train_size:]
 
     results_list=[]
-    failed_penalty=[]
     # for p in range(10):
     for p in [2**i for i in range(3,13)]:
         rr=RidgeRegression()
-        try: 
-            theta=rr.fit(X_train, y_train,p)
-            result=Results(rr)
-            results_list.append(result.summary())
-        except:
-            print("fitting failed")
-            failed_penalty.append(p)
+        rr.fit(X_train,y_train,p)
+        rr.predict(X_test)
+        results=Results(rr)
+        results_list.append(results.summary())
 
     # ---save theta(parameter) , prediction , test_data
     with open(output_dir/(f"rr_predict_{data_name}_{partition_type}nParts{n_parts}.pickle"),"wb") as f:
-        pickle.dump([results_list,y_test,failed_penalty],f)
+        pickle.dump([results_list,y_test],f)
 
