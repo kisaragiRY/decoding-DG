@@ -157,7 +157,7 @@ class Results():
             "fitting":self.fitting,
             "penalty":self.penalty,
             "fitted parameter":self.theta,
-            "fitted error":cal_mae(np.einsum("ij,j->i",self.X_train,self.theta),self.y_train),
+            "fitted error":cal_mse(np.einsum("ij,j->i",self.X_train,self.theta),self.y_train),
             "overall sig":self.overall_sig,
             "individual sig":self.individual_sig,
             "prediction":self.prediction,
