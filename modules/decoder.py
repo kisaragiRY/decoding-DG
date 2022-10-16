@@ -6,33 +6,6 @@ from .func import *
 from tqdm import tqdm
 from scipy import stats
 
-class LinearRegression():
-    '''A linear guassian model.
-
-    x_t=theta.T・n_t + b_t
-    x_t: discretized position
-    theta: parameter
-    n_t: spikes
-    b_t: intercept
-    '''
-    def __init__(self) -> None:
-        pass
-
-    def fit(self,design_matrix_train:np.array,binned_position_train:np.array):
-        '''
-        fitting based on training data
-        return the fitted coefficients
-        '''
-        tmp1=np.einsum("ji,ik->jk",design_matrix_train.T,design_matrix_train)
-        tmp2=np.einsum("ji,ik->jk",design_matrix_train.T,binned_position_train)
-        self.theta= np.einsum("ji,ik->j",inv(tmp1),tmp2)
-        return self.theta
-    def predict(self,design_matrix_test:np.array):
-        '''
-        predicting based on test data 
-        '''
-        return np.einsum("ij,j->i",design_matrix_test,self.theta)
-
 class RidgeRegression():
     '''A linear guassian ridge model.
 
@@ -45,22 +18,22 @@ class RidgeRegression():
     def __init__(self) -> None:
         pass
 
-    def fit(self,design_matrix_train:np.array,binned_position_train:np.array,penalty:float):
+    def fit(self,X_train:np.array,y_train:np.array,penalty:float):
         '''Fitting based on training data.
         
         return the fitted coefficients
 
         Parameter:
         ---------
-        design_matrix_train: np.array
+        X_train: np.array
             train design matrix including one column full of 1 for the intercept
-        binned_position_train: np.array
+        y_train: np.array
             discretized position from continuous coordinates to discrete value 1,2,3...
         penalty: float
             the penalty added on ridge model
         '''
-        self.X_train=design_matrix_train
-        self.y_train=binned_position_train.reshape(-1,1)
+        self.X_train=X_train
+        self.y_train=y_train.reshape(-1,1)
         self.penalty=penalty
 
         tmp1=np.einsum("ji,ik->jk",self.X_train.T,self.X_train)
