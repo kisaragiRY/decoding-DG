@@ -1,9 +1,8 @@
-from os import stat
 import numpy as np
 from scipy.linalg import inv
 from pathlib import Path
 import pickle
-from func import *
+from .func import *
 from tqdm import tqdm
 from scipy import stats
 
