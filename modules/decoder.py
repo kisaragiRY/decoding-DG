@@ -69,8 +69,10 @@ class RidgeRegression():
         try: 
             inv(tmp1+penalty*np.identity(len(tmp1)))
             self.theta= np.einsum("ji,ik->j",inv(tmp1+penalty*np.identity(len(tmp1))),tmp2)
+            self.fitting=True # indicate whether the fitting is successfully conducted
 
         except: 
+            self.fitting=False
             self.theta= np.array([np.nan]*self.X_train.shape[1])
 
     def predict(self,X_test:np.array):
@@ -98,7 +100,7 @@ class Results():
         self.y_train=model.y_train
         self.theta=model.theta
         self.prediction=model.prediction
-
+        self.fitting=model.fitting
 
     def cal_overall_sig(self):
         """Run a hypothesis test for the overall coefficients in the model.
@@ -152,6 +154,7 @@ class Results():
         self.cal_indiv_sig()
         smry={
             "model name": "Ridge Refression",
+            "fitting":self.fitting,
             "penalty":self.penalty,
             "fitted parameter":self.theta,
             "fitted error":cal_mae(np.einsum("ij,j->i",self.X_train,self.theta),self.y_train),
