@@ -1,38 +1,10 @@
-from os import stat
 import numpy as np
 from scipy.linalg import inv
 from pathlib import Path
 import pickle
-from func import *
+from .func import *
 from tqdm import tqdm
 from scipy import stats
-
-class LinearRegression():
-    '''A linear guassian model.
-
-    x_t=theta.T・n_t + b_t
-    x_t: discretized position
-    theta: parameter
-    n_t: spikes
-    b_t: intercept
-    '''
-    def __init__(self) -> None:
-        pass
-
-    def fit(self,design_matrix_train:np.array,binned_position_train:np.array):
-        '''
-        fitting based on training data
-        return the fitted coefficients
-        '''
-        tmp1=np.einsum("ji,ik->jk",design_matrix_train.T,design_matrix_train)
-        tmp2=np.einsum("ji,ik->jk",design_matrix_train.T,binned_position_train)
-        self.theta= np.einsum("ji,ik->j",inv(tmp1),tmp2)
-        return self.theta
-    def predict(self,design_matrix_test:np.array):
-        '''
-        predicting based on test data 
-        '''
-        return np.einsum("ij,j->i",design_matrix_test,self.theta)
 
 class RidgeRegression():
     '''A linear guassian ridge model.
@@ -46,22 +18,22 @@ class RidgeRegression():
     def __init__(self) -> None:
         pass
 
-    def fit(self,design_matrix_train:np.array,binned_position_train:np.array,penalty:float):
+    def fit(self,X_train:np.array,y_train:np.array,penalty:float):
         '''Fitting based on training data.
         
         return the fitted coefficients
 
         Parameter:
         ---------
-        design_matrix_train: np.array
+        X_train: np.array
             train design matrix including one column full of 1 for the intercept
-        binned_position_train: np.array
+        y_train: np.array
             discretized position from continuous coordinates to discrete value 1,2,3...
         penalty: float
             the penalty added on ridge model
         '''
-        self.X_train=design_matrix_train
-        self.y_train=binned_position_train.reshape(-1,1)
+        self.X_train=X_train
+        self.y_train=y_train.reshape(-1,1)
         self.penalty=penalty
 
         tmp1=np.einsum("ji,ik->jk",self.X_train.T,self.X_train)
@@ -69,8 +41,10 @@ class RidgeRegression():
         try: 
             inv(tmp1+penalty*np.identity(len(tmp1)))
             self.theta= np.einsum("ji,ik->j",inv(tmp1+penalty*np.identity(len(tmp1))),tmp2)
+            self.fitting=True # indicate whether the fitting is successfully conducted
 
         except: 
+            self.fitting=False
             self.theta= np.array([np.nan]*self.X_train.shape[1])
 
     def predict(self,X_test:np.array):
@@ -98,7 +72,7 @@ class Results():
         self.y_train=model.y_train
         self.theta=model.theta
         self.prediction=model.prediction
-
+        self.fitting=model.fitting
 
     def cal_overall_sig(self):
         """Run a hypothesis test for the overall coefficients in the model.
@@ -152,9 +126,10 @@ class Results():
         self.cal_indiv_sig()
         smry={
             "model name": "Ridge Refression",
+            "fitting":self.fitting,
             "penalty":self.penalty,
             "fitted parameter":self.theta,
-            "fitted error":cal_mae(np.einsum("ij,j->i",self.X_train,self.theta),self.y_train),
+            "fitted error":cal_mse(np.einsum("ij,j->i",self.X_train,self.theta),self.y_train),
             "overall sig":self.overall_sig,
             "individual sig":self.individual_sig,
             "prediction":self.prediction,

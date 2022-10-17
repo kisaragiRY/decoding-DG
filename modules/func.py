@@ -8,20 +8,20 @@ from zmq import Errno
  
 def load_data(data_dir):
     '''
-    load positiona and spike data
+    load coordinates and spike data
     '''
-    position_df=pd.read_excel(data_dir/'position.xlsx')
-    position=position_df.values[3:,1:3] # only take the X,Y axis data
+    coords_df=pd.read_excel(data_dir/'position.xlsx')
+    coords=coords_df.values[3:,1:3] # only take the X,Y axis data
 
     spikes_df=pd.read_excel(data_dir/'traces.xlsx',index_col=0)
     spikes=spikes_df.values
 
     # make sure spike and postion data have the same length
-    n_bins=min(len(position),len(spikes))
-    position = position[:n_bins]
+    n_bins=min(len(coords),len(spikes))
+    coords = coords[:n_bins]
     spikes = spikes[:n_bins]
 
-    return position,spikes
+    return coords,spikes
     
 def bin_pos(position,num_par=2,partition_type="grid"):
     '''
