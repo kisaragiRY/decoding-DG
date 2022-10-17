@@ -8,12 +8,13 @@ from modules.func import *
 from modules.decoder import Results, RidgeRegression
 from tqdm import tqdm
 import pickle
+from itertools import product
 
 # coordinate
-coord_axis="y-axis"
+coord_axis_opts=["x-axis","y-axis"]
 
 # range of nthist(number of time bins for history)
-nthist_range=[3*i for i in range(1,17)[::2]]
+nthist_range=[3*i for i in range(17)[::2]]
 
 # data dir
 all_data_dir=Path('data/alldata/')
@@ -32,13 +33,12 @@ for data_dir in tqdm(datalist):
     time_bin_size=1/3 #second
     n_time_bins,n_cells = spikes.shape
 
-    results_nthist=[]
-    for nthist in nthist_range:
+    results_nthist_coor=[]
+    for nthist,coord_axis in product(nthist_range,coord_axis_opts):
         design_mat_all=mk_design_matrix_decoder2(spikes,nthist) # design matrix with summed spikes
         coord=coords_xy[:,0][nthist:] if coord_axis=="x-axis" else coords_xy[:,1][nthist:] # the length would shrink because of the nthist
 
         train_size=int(n_time_bins/2)
-
         X_train,y_train=design_mat_all[:train_size],coord[:train_size]
         X_test,y_test=design_mat_all[train_size:],coord[train_size:]
 
@@ -51,9 +51,9 @@ for data_dir in tqdm(datalist):
             results=Results(rr)
             results_list.append(results.summary())
         
-        results_nthist.append((results_list,nthist))
+        results_nthist_coor.append((results_list,nthist,coord_axis))
 
     # ---save results
-    with open(output_dir/(f"rr_summed_spikes_coor{coord_axis}_{data_name}.pickle"),"wb") as f:
-        pickle.dump(results_nthist,f)
+    with open(output_dir/(f"rr_summed_spikes_{data_name}.pickle"),"wb") as f:
+        pickle.dump(results_nthist_coor,f)
 
