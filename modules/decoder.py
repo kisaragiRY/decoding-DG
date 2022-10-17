@@ -125,7 +125,7 @@ class Results():
         self.cal_overall_sig()
         self.cal_indiv_sig()
         smry={
-            "model name": "Ridge Refression",
+            "model name": "Ridge Regression",
             "fitting":self.fitting,
             "penalty":self.penalty,
             "fitted parameter":self.theta,
