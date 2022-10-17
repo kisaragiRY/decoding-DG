@@ -1,14 +1,14 @@
-from turtle import pen
 import numpy as np
 from scipy.linalg import inv
 from pathlib import Path
 import pickle
-from func import *
+from .func import *
 from tqdm import tqdm
+from scipy import stats
 
-class linear_gaussian():
-    '''
-    a linear guassian model
+class RidgeRegression():
+    '''A linear guassian ridge model.
+
     x_t=theta.T・n_t + b_t
     x_t: discretized position
     theta: parameter
@@ -18,128 +18,120 @@ class linear_gaussian():
     def __init__(self) -> None:
         pass
 
-    def fit(self,design_matrix_train:np.array,binned_position_train:np.array):
-        '''
-        fitting based on training data
+    def fit(self,X_train:np.array,y_train:np.array,penalty:float):
+        '''Fitting based on training data.
+        
         return the fitted coefficients
-        '''
-        tmp1=np.einsum("ji,ik->jk",design_matrix_train.T,design_matrix_train)
-        tmp2=np.einsum("ji,ik->jk",design_matrix_train.T,binned_position_train)
-        self.theta= np.einsum("ji,ik->j",inv(tmp1),tmp2)
-        return self.theta
-    def predict(self,design_matrix_test:np.array):
-        '''
-        predicting based on test data 
-        '''
-        return np.einsum("ij,j->i",design_matrix_test,self.theta)
 
-class linear_gaussian_ridge():
-    '''
-    a linear guassian ridge model
-    x_t=theta.T・n_t + b_t
-    x_t: discretized position
-    theta: parameter
-    n_t: spikes
-    b_t: intercept
-    '''
-    def __init__(self) -> None:
-        pass
+        Parameter:
+        ---------
+        X_train: np.array
+            train design matrix including one column full of 1 for the intercept
+        y_train: np.array
+            discretized position from continuous coordinates to discrete value 1,2,3...
+        penalty: float
+            the penalty added on ridge model
+        '''
+        self.X_train=X_train
+        self.y_train=y_train.reshape(-1,1)
+        self.penalty=penalty
 
-    def fit(self,design_matrix_train:np.array,binned_position_train:np.array,penalty:float):
-        '''
-        fitting based on training data
-        return the fitted coefficients
-        '''
-        tmp1=np.einsum("ji,ik->jk",design_matrix_train.T,design_matrix_train)
-        tmp2=np.einsum("ji,ik->jk",design_matrix_train.T,binned_position_train)
-        self.theta= np.einsum("ji,ik->j",inv(tmp1+penalty*np.identity(len(tmp1))),tmp2)
-        return self.theta
+        tmp1=np.einsum("ji,ik->jk",self.X_train.T,self.X_train)
+        tmp2=np.einsum("ji,ik->jk",self.X_train.T,self.y_train)
+        try: 
+            inv(tmp1+penalty*np.identity(len(tmp1)))
+            self.theta= np.einsum("ji,ik->j",inv(tmp1+penalty*np.identity(len(tmp1))),tmp2)
+            self.fitting=True # indicate whether the fitting is successfully conducted
 
-    def predict(self,design_matrix_test:np.array):
-        '''
-        predicting based on test data
+        except: 
+            self.fitting=False
+            self.theta= np.array([np.nan]*self.X_train.shape[1])
+
+    def predict(self,X_test:np.array):
+        '''Predicting using fitted parameters based on test data.
+        
         return the predicted results
+
+        Parameter:
+        ---------
+        design_matrix_test: np.array
+            test design matrix including one column full of 1 for the intercept
+
         '''
-        return np.einsum("ij,j->i",design_matrix_test,self.theta)
+        self.prediction=np.einsum("ij,j->i",X_test,self.theta)
 
-if __name__=="__main__":
-    import matplotlib.pyplot as plt
+class Results():
+    """Contain RidgeRegression results.
 
-    decoder_m="linear gaussian ridge" # decoder method
-    partition_type="vertical"
-    n_parts=4
+    Including fitted parameters and hypothesis tests.
+    """
+    def __init__(self,model) -> None:
+        super().__init__()
+        self.penalty=model.penalty
+        self.X_train=model.X_train
+        self.y_train=model.y_train
+        self.theta=model.theta
+        self.prediction=model.prediction
+        self.fitting=model.fitting
 
-    all_data_dir=Path('data/alldata/')
-    datalist=[x for x in all_data_dir.iterdir()]
-    
-    # output_dir=Path("Output/data/linear_gaussian/")
-    output_dir=Path("output/data/linear_gaussian_ridge/")
-    if not output_dir.exists():
-        output_dir.mkdir()
+    def cal_overall_sig(self):
+        """Run a hypothesis test for the overall coefficients in the model.
 
-    # -----load sample data
-    # sample_data_index=1
-    # data_dir=datalist[sample_data_index]
-    # sample_name=str(data_dir).split('/')[-1]
-    # sample_type = "CaMKII" if "CaMKII" in sample_name else "Control"
-    # print(sample_name)
+        The statistics=[(ESS-RSS)/(p-1)] / [RSS/(n-p)] ~ F-distribution(p-1,n-p),
+        where ESS is explained sum of squares abd RSS is residual sum of squares.
+        """
+        n,p=self.X_train.shape
+        # Residual Sum of Squares=y'y-theta_hat'X'y
+        RSS=np.einsum("ji,ik->jk",self.y_train.T,self.y_train)-self.theta.dot(np.einsum("ji,ik->jk",self.X_train.T,self.y_train)) 
+        # Explained sum of squares=∑(y_i-y_bar)
+        ESS=np.sum(self.y_train-np.average(self.y_train))
+        # Statistics
+        F= ((ESS-RSS)/(p-1)) / (RSS/(n-p))
+        # get p-value from F-distribution
+        p_value=stats.f.sf(F,p-1,n-p)
 
-    for data_dir in tqdm(datalist):
-        data_name=str(data_dir).split('/')[-1]
-        position,spikes=data_loader(data_dir) # load data
+        self.overall_sig= p_value
 
-        # binned_position=bin_pos(position,n_parts,partition_type)
-        binned_position=position
-        time_bin_size=1/3 #second
-        num_time_bins,num_cells = spikes.shape
+    def cal_indiv_sig(self):
+        """Run a hypothesis test for individual coefficients 
 
-        design_mat_all=design_matrix_decoder(spikes)
+        The statistics=t_i=theta_hat/(c_ii**.5 * sigma_hat) ~ t with n-p degree of freedom,
+        wheret heta_hat is the fitted parameter, c_ii is the diagnal elements of inv(X'X), 
+        sigma_hat**2=RSS/(n-p).
+        If |t_i|>t(alpha/2), refuse hypothesis.
+        """
+        n,p=self.X_train.shape
+        # Residual Sum of Squares=y'y-theta_hat'X'y
+        RSS=np.einsum("ji,ik->jk",self.y_train.T,self.y_train)-self.theta.dot(np.einsum("ji,ik->jk",self.X_train.T,self.y_train)) 
+        # inv(X'X)
+        try: C=inv(np.einsum("ji,ik->jk",self.X_train.T,self.X_train))
+        except: 
+            self.individual_sig= np.array([np.nan]*len(self.theta))
+            return
 
-        # split traina and test
-        n_time_bins_train=int(num_time_bins/2)
+        # sigma
+        sigma2=RSS/(n-p)
+        # list of t statistics for each element in theta_hat
+        t_list=[self.theta[i]/(C[i,i]*sigma2**.5) for i in range(len(self.theta))]
+        # p-value list based on the t_list
+        p_value_list=[stats.t.cdf(t,n-p) for t in t_list]
+        
+        self.individual_sig= p_value_list
 
-        design_mat_train, binned_position_train = design_mat_all[:n_time_bins_train] , binned_position[:n_time_bins_train].reshape(-1,1)
-        design_mat_test, binned_position_test = design_mat_all[n_time_bins_train:] , binned_position[n_time_bins_train:].reshape(-1,1)
 
-        if decoder_m=="linear gaussian": # ----this is only for two samples data(control & camkII)
-            sample_name=data_name
-            sample_type = "CaMKII" if "CaMKII" in sample_name else "Control"
-            lg=linear_gaussian()
-            try: 
-                theta=lg.fit(design_mat_train, binned_position_train)
-                prediction=lg.predict(design_mat_test)
-            except:
-                print("fitting failed")
-                theta=[np.nan]*design_mat_train.shape[1]
-                prediction=[np.nan]*len(binned_position_test)
-            # -----save sample theta(parameter) , prediction , test_data
-            with open(output_dir/(f"lg_predict_{sample_type}.pickle"),"wb") as f:
-                pickle.dump([theta,prediction,binned_position_test],f)
-
-        elif decoder_m=="linear gaussian ridge":
-            theta_prediction_penalty=[]
-            failed_penalty=[]
-            # for p in range(10):
-            for p in [2**i for i in range(3,13)]:
-                lgr=linear_gaussian_ridge()
-                try: 
-                    theta=lgr.fit(design_mat_train, binned_position_train,p)
-                    prediction=lgr.predict(design_mat_test)
-                    prediction_train=lgr.predict(design_mat_train)
-                except:
-                    print("fitting failed")
-                    failed_penalty.append(p)
-                    # if fitting failed, set the following variables to np.nan
-                    theta=np.array([np.nan]*design_mat_train.shape[1])
-                    prediction=np.array([np.nan]*len(binned_position_test))
-                    prediction_train=np.array([np.nan]*len(binned_position_test))
-                theta_prediction_penalty.append([theta,prediction,prediction_train,p])
-
-            # save theta(parameter) , prediction , test_data
-            # with open(output_dir/(f"lgr_predict_{data_name}.pickle"),"wb") as f:
-            # with open(output_dir/(f"lgr_predict_{data_name}_withLargerPenalty_{n_parts}_{partition_type}.pickle"),"wb") as f:
-            with open(output_dir/(f"lgr_predict_{data_name}_withoutPartition.pickle"),"wb") as f:
-                pickle.dump([theta_prediction_penalty,binned_position_test,binned_position_train,failed_penalty],f)
-
-    
-
+    def summary(self):
+        """The summary of hypothesis tests
+        """
+        self.cal_overall_sig()
+        self.cal_indiv_sig()
+        smry={
+            "model name": "Ridge Refression",
+            "fitting":self.fitting,
+            "penalty":self.penalty,
+            "fitted parameter":self.theta,
+            "fitted error":cal_mse(np.einsum("ij,j->i",self.X_train,self.theta),self.y_train),
+            "overall sig":self.overall_sig,
+            "individual sig":self.individual_sig,
+            "prediction":self.prediction,
+        }
+        return smry
