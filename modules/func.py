@@ -105,6 +105,34 @@ def mk_design_matrix_decoder(spikes:np.array,nthist:int=0):
         raise ValueError("Invalid Value: nthis shoudl be larger than 1 or equal to 0")
     return design_mat_all_offset
 
+def mk_design_matrix_decoder2(spikes:np.array,nthist:int=0):
+    """Make design matrix for decoder with summed spikes from history bins.
+
+    eg. nthist=2
+    ---       ---
+    |0|       |0|
+    ---       ---
+    |1|       |1|
+    ---  ---> ---
+    |0|       |1|   <---current bin + history = 0 + (0+1) = 1
+    ---       ---     
+    |1|       |2|   <---current bin + history = 1 + (1+0) = 2
+
+    Parameter:
+    ----------
+    spikes: np.array
+        that has neurons's spikes count data.
+    nthist: int
+        num of time bins for spikes history, default=0
+    """
+    n_time_bins, n_neurons = spikes.shape
+    new_spikes = np.zeros((n_time_bins - nthist,n_neurons))
+    for i in range(nthist,n_time_bins):
+        new_spikes[i-nthist] = spikes[i-nthist:i].sum(axis=0) 
+
+    design_mat_all_offset = np.hstack((np.ones((n_time_bins-nthist,1)), new_spikes))
+    return design_mat_all_offset
+
 
 def cal_mse(prediction,observation):
     '''
@@ -123,29 +151,3 @@ def cal_mae(prediction,observation):
         tmp=[np.abs(i-j)for i,j in zip(prediction,observation)]
     return np.sum(tmp)/len(prediction)
 
-
-if __name__=="__main__":
-    """
-    """
-    # data dir
-    all_data_dir=Path('data/alldata/')
-    datalist=[x for x in all_data_dir.iterdir()]
-
-    # get the regression results for all the mice
-    data_dir=datalist[0]
-    data_name=str(data_dir).split('/')[-1]
-    _,spikes=load_data(data_dir) # load data
-
-    # binned_position=bin_pos(position,n_parts,partition_type)
-    time_bin_size=1/3 #second
-    n_time_bins,n_cells = spikes.shape
-
-    design_mat_all=mk_design_matrix_decoder(spikes,2)
-
-
-#%%
-import numpy as np
-from scipy.linalg import hankel
-m=np.arange(24).reshape(4,6)
-hankel(m[:-3+1,1],m[-3:,1])
-#%%
