@@ -151,21 +151,3 @@ def cal_mae(prediction,observation):
         tmp=[np.abs(i-j)for i,j in zip(prediction,observation)]
     return np.sum(tmp)/len(prediction)
 
-
-if __name__=="__main__":
-    """
-    """
-    # data dir
-    all_data_dir=Path('data/alldata/')
-    datalist=[x for x in all_data_dir.iterdir()]
-
-    # get the regression results for all the mice
-    data_dir=datalist[0]
-    data_name=str(data_dir).split('/')[-1]
-    _,spikes=load_data(data_dir) # load data
-
-    # binned_position=bin_pos(position,n_parts,partition_type)
-    time_bin_size=1/3 #second
-    n_time_bins,n_cells = spikes.shape
-
-    design_mat_all=mk_design_matrix_decoder2(spikes,2)
