@@ -1,14 +1,10 @@
-"""
-implement ridge regression using summed spikes, 
-see mk_design_matrix_decoder2 in func.py for details.
-"""
-
 from pathlib import Path
 from modules.func import *
 from modules.decoder import Results, RidgeRegression
 from tqdm import tqdm
 import pickle
 from itertools import product
+
 
 # coordinate
 coord_axis_opts=["x-axis","y-axis"]
@@ -33,7 +29,7 @@ for data_dir in tqdm(datalist):
     time_bin_size=1/3 #second
     n_time_bins,n_cells = spikes.shape
 
-    results_list=[]
+    results_all=[]
     for nthist,coord_axis in product(nthist_range,coord_axis_opts):
         design_mat_all=mk_design_matrix_decoder2(spikes,nthist) # design matrix with summed spikes
         coord=coords_xy[:,0][nthist:] if coord_axis=="x-axis" else coords_xy[:,1][nthist:] # the length would shrink because of the nthist
@@ -42,18 +38,23 @@ for data_dir in tqdm(datalist):
         X_train,y_train=design_mat_all[:train_size],coord[:train_size]
         X_test,y_test=design_mat_all[train_size:],coord[train_size:]
 
-        results_smry=[]
         penalty_range=[2**i for i in range(3,21)]
         for p in penalty_range:
             rr=RidgeRegression()
             rr.fit(X_train,y_train,p)
             rr.predict(X_test)
-            results=Results(rr)
-            results_smry.append(results.summary())
-        
-        results_list.append((results_smry,nthist,coord_axis))
+            model_smry=Results(rr).summary()
+
+            result_wrap={
+                "model_smry": model_smry,
+                "nthist": nthist,
+                "penalty": p,
+                "coord_axis": coord_axis,
+                "y_test": y_test
+            }
+            results_all.append(result_wrap)
 
     # ---save results
     with open(output_dir/(f"rr_summed_spikes_{data_name}.pickle"),"wb") as f:
-        pickle.dump((results_list,coords_xy),f)
+        pickle.dump(results_all,f)
 
