@@ -33,7 +33,7 @@ for data_dir in tqdm(datalist):
     time_bin_size=1/3 #second
     n_time_bins,n_cells = spikes.shape
 
-    results_nthist_coor=[]
+    results_list=[]
     for nthist,coord_axis in product(nthist_range,coord_axis_opts):
         design_mat_all=mk_design_matrix_decoder2(spikes,nthist) # design matrix with summed spikes
         coord=coords_xy[:,0][nthist:] if coord_axis=="x-axis" else coords_xy[:,1][nthist:] # the length would shrink because of the nthist
@@ -42,18 +42,18 @@ for data_dir in tqdm(datalist):
         X_train,y_train=design_mat_all[:train_size],coord[:train_size]
         X_test,y_test=design_mat_all[train_size:],coord[train_size:]
 
-        results_list=[]
+        results_smry=[]
         penalty_range=[2**i for i in range(3,21)]
         for p in penalty_range:
             rr=RidgeRegression()
             rr.fit(X_train,y_train,p)
             rr.predict(X_test)
             results=Results(rr)
-            results_list.append(results.summary())
+            results_smry.append(results.summary())
         
-        results_nthist_coor.append((results_list,nthist,coord_axis))
+        results_list.append((results_smry,nthist,coord_axis))
 
     # ---save results
     with open(output_dir/(f"rr_summed_spikes_{data_name}.pickle"),"wb") as f:
-        pickle.dump(results_nthist_coor,f)
+        pickle.dump((results_list,coords_xy),f)
 
