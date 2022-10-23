@@ -3,16 +3,13 @@ implement ridge regression without discretization of coordinates
 """
 
 from pathlib import Path
-
-print(Path().absolute())
-
 from modules.func import *
 from modules.decoder import Results, RidgeRegression
 from tqdm import tqdm
 import pickle
 
 # coordinate
-coord_axis="y-axis"
+coord_axis="x-axis"
 
 # data dir
 all_data_dir=Path('data/alldata/')
@@ -31,7 +28,7 @@ for data_dir in tqdm(datalist):
     time_bin_size=1/3 #second
     n_time_bins,n_cells = spikes.shape
 
-    design_mat_all=mk_design_matrix_decoder(spikes)
+    design_mat_all=mk_design_matrix_decoder1(spikes)
     coord=coords_xy[:,0] if coord_axis=="x-axis" else coords_xy[:,1]
 
     train_size=int(n_time_bins/2)
@@ -40,8 +37,8 @@ for data_dir in tqdm(datalist):
     X_test,y_test=design_mat_all[train_size:],coord[train_size:]
 
     results_list=[]
-    # for p in range(10):
-    for p in [2**i for i in range(3,21)]:
+    # for p in [2**i for i in range(3,21)]:
+    for p in range(1,10):
         rr=RidgeRegression()
         rr.fit(X_train,y_train,p)
         rr.predict(X_test)
@@ -49,6 +46,8 @@ for data_dir in tqdm(datalist):
         results_list.append(results.summary())
 
     # ---save theta(parameter) , prediction , test_data
-    with open(output_dir/(f"rr_summary_coor{coord_axis}_{data_name}.pickle"),"wb") as f:
+    # with open(output_dir/(f"rr_summary_coor{coord_axis}_{data_name}.pickle"),"wb") as f:
+    #     pickle.dump([results_list,y_test],f)
+    with open(output_dir/(f"rr_original_pRange1-9_coor{coord_axis}_{data_name}.pickle"),"wb") as f:
         pickle.dump([results_list,y_test],f)
 

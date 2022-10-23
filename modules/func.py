@@ -81,7 +81,7 @@ def mk_design_matrix_encoder(binned_position,spikes,ntfilt,nthist):
 
     return design_mat_all_offset
 
-def mk_design_matrix_decoder(spikes:np.array,nthist:int=0):
+def mk_design_matrix_decoder1(spikes:np.array,nthist:int=0):
     """Make design matrix with/without spike history for decoder.
 
     Parameter:
