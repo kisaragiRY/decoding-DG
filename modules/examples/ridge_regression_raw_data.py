@@ -9,7 +9,7 @@ from tqdm import tqdm
 import pickle
 
 # coordinate
-coord_axis="x-axis"
+coord_axis_opts=["x-axis","y-axis"]
 
 # data dir
 all_data_dir=Path('data/alldata/')
@@ -27,27 +27,35 @@ for data_dir in tqdm(datalist):
 
     time_bin_size=1/3 #second
     n_time_bins,n_cells = spikes.shape
-
     design_mat_all=mk_design_matrix_decoder1(spikes)
-    coord=coords_xy[:,0] if coord_axis=="x-axis" else coords_xy[:,1]
+    
+    results_all=[]
+    for coord_axis in coord_axis_opts:
+        coord=coords_xy[:,0] if coord_axis=="x-axis" else coords_xy[:,1]
 
-    train_size=int(n_time_bins/2)
+        train_size=int(n_time_bins/2)
 
-    X_train,y_train=design_mat_all[:train_size],coord[:train_size]
-    X_test,y_test=design_mat_all[train_size:],coord[train_size:]
+        X_train,y_train=design_mat_all[:train_size],coord[:train_size]
+        X_test,y_test=design_mat_all[train_size:],coord[train_size:]
 
-    results_list=[]
-    # for p in [2**i for i in range(3,21)]:
-    for p in range(1,10):
-        rr=RidgeRegression()
-        rr.fit(X_train,y_train,p)
-        rr.predict(X_test)
-        results=Results(rr)
-        results_list.append(results.summary())
+        for p in [2**i for i in range(3,21)]:
+        # for p in range(1,10):
+            rr=RidgeRegression()
+            rr.fit(X_train,y_train,p)
+            rr.predict(X_test)
+            model_smry=Results(rr).summary()
+
+            result_wrap={
+                "model_smry": model_smry,
+                "coord_axis": coord_axis,
+                "y_test": y_test
+            }
+            results_all.append(result_wrap)
+
 
     # ---save theta(parameter) , prediction , test_data
-    # with open(output_dir/(f"rr_summary_coor{coord_axis}_{data_name}.pickle"),"wb") as f:
+    with open(output_dir/(f"rr_raw_data_{data_name}.pickle"),"wb") as f:
+        pickle.dump(results_all,f)
+    # with open(output_dir/(f"rr_original_pRange1-9_coor{coord_axis}_{data_name}.pickle"),"wb") as f:
     #     pickle.dump([results_list,y_test],f)
-    with open(output_dir/(f"rr_original_pRange1-9_coor{coord_axis}_{data_name}.pickle"),"wb") as f:
-        pickle.dump([results_list,y_test],f)
 
