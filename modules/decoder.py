@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+from functools import cached_property
 import numpy as np
 from scipy.linalg import inv
 from pathlib import Path
@@ -60,39 +62,35 @@ class RidgeRegression():
         '''
         self.prediction=np.einsum("ij,j->i",X_test,self.theta)
 
-class Results():
+@dataclass
+class Results:
     """Contain RidgeRegression results.
 
     Including fitted parameters and hypothesis tests.
     """
-    def __init__(self,model) -> None:
-        super().__init__()
-        self.penalty=model.penalty
-        self.X_train=model.X_train
-        self.y_train=model.y_train
-        self.theta=model.theta
-        self.prediction=model.prediction
-        self.fitting=model.fitting
+    model:RidgeRegression
 
-    def cal_overall_sig(self):
+    @cached_property
+    def overall_sig(self):
         """Run a hypothesis test for the overall coefficients in the model.
 
         The statistics=[(ESS-RSS)/(p-1)] / [RSS/(n-p)] ~ F-distribution(p-1,n-p),
         where ESS is explained sum of squares abd RSS is residual sum of squares.
         """
-        n,p=self.X_train.shape
+        n,p=self.model.X_train.shape
         # Residual Sum of Squares=y'y-theta_hat'X'y
-        RSS=np.einsum("ji,ik->jk",self.y_train.T,self.y_train)-self.theta.dot(np.einsum("ji,ik->jk",self.X_train.T,self.y_train)) 
+        RSS=np.einsum("ji,ik->jk",self.model.y_train.T,self.model.y_train)-self.model.theta.dot(np.einsum("ji,ik->jk",self.model.X_train.T,self.model.y_train)) 
         # Explained sum of squares=∑(y_i-y_bar)
-        ESS=np.sum(self.y_train-np.average(self.y_train))
+        ESS=np.sum(self.model.y_train-np.average(self.model.y_train))
         # Statistics
         F= ((ESS-RSS)/(p-1)) / (RSS/(n-p))
         # get p-value from F-distribution
         p_value=stats.f.sf(F,p-1,n-p)
 
-        self.overall_sig= p_value
+        return np.array(p_value).ravel()
 
-    def cal_indiv_sig(self):
+    @cached_property
+    def individual_sig(self):
         """Run a hypothesis test for individual coefficients 
 
         The statistics=t_i=theta_hat/(c_ii**.5 * sigma_hat) ~ t with n-p degree of freedom,
@@ -100,38 +98,40 @@ class Results():
         sigma_hat**2=RSS/(n-p).
         If |t_i|>t(alpha/2), refuse hypothesis.
         """
-        n,p=self.X_train.shape
+        n,p=self.model.X_train.shape
         # Residual Sum of Squares=y'y-theta_hat'X'y
-        RSS=np.einsum("ji,ik->jk",self.y_train.T,self.y_train)-self.theta.dot(np.einsum("ji,ik->jk",self.X_train.T,self.y_train)) 
-        # inv(X'X)
-        try: C=inv(np.einsum("ji,ik->jk",self.X_train.T,self.X_train))
-        except: 
-            self.individual_sig= np.array([np.nan]*len(self.theta))
-            return
+        RSS=np.einsum("ji,ik->jk",self.model.y_train.T,self.model.y_train)-self.model.theta.dot(np.einsum("ji,ik->jk",self.model.X_train.T,self.model.y_train)) 
+
+        try: 
+            inv_tmp=inv(np.einsum("ji,ik->jk",self.model.X_train.T,self.model.X_train) + self.model.penalty*np.ones(p)) # (X'X+λI)^-1
+            tmp1=np.einsum("ji,ik->jk",inv_tmp,self.model.X_train.T) # inv_tmp@X'
+            tmp2=np.einsum("ji,ik->jk",self.model.X_train,inv_tmp) # X@inv_tmp
+            C=np.einsum("ji,ik->jk",tmp1,tmp2)
+        except:
+            C=np.empty((p,p))
+            C[:]=np.nan
 
         # sigma
         sigma2=RSS/(n-p)
         # list of t statistics for each element in theta_hat
-        t_list=[self.theta[i]/(C[i,i]*sigma2**.5) for i in range(len(self.theta))]
+        t_list=[self.model.theta[i]/(C[i,i]*sigma2**.5) for i in range(len(self.model.theta))]
         # p-value list based on the t_list
         p_value_list=[stats.t.cdf(t,n-p) for t in t_list]
         
-        self.individual_sig= p_value_list
+        return np.array(p_value_list).ravel()
 
 
     def summary(self):
         """The summary of hypothesis tests
         """
-        self.cal_overall_sig()
-        self.cal_indiv_sig()
         smry={
             "model name": "Ridge Regression",
-            "fitting":self.fitting,
-            "penalty":self.penalty,
-            "fitted parameter":self.theta,
-            "fitted error":cal_mse(np.einsum("ij,j->i",self.X_train,self.theta),self.y_train),
+            "fitting":self.model.fitting,
+            "penalty":self.model.penalty,
+            "fitted parameter":self.model.theta,
+            "fitted error":cal_mse(np.einsum("ij,j->i",self.model.X_train,self.model.theta),self.model.y_train),
             "overall sig":self.overall_sig,
             "individual sig":self.individual_sig,
-            "prediction":self.prediction,
+            "prediction":self.model.prediction,
         }
         return smry
