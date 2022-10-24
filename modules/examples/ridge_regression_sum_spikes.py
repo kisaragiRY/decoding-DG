@@ -48,7 +48,6 @@ for data_dir in tqdm(datalist):
             result_wrap={
                 "model_smry": model_smry,
                 "nthist": nthist,
-                "penalty": p,
                 "coord_axis": coord_axis,
                 "y_test": y_test
             }
