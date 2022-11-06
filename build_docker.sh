@@ -1,1 +1,1 @@
-docker build -t dg-encoding-decoding:py3.8.5 -f Dockerfile .
+docker build -t dg-decoding:py3.8.5 -f Dockerfile .

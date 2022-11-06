@@ -1,4 +1,4 @@
-docker run -itd \
+docker run -it \
     --name dg-encoder-decoder\
     -v "$(pwd)":/work \
-    dg-encoding-decoding:py3.8.5
+    dg-decoding:py3.8.5
