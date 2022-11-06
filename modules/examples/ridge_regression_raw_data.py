@@ -1,16 +1,15 @@
+"""
+implement ridge regression without discretization of coordinates
+"""
+
 from pathlib import Path
 from modules.func import *
 from modules.decoder import Results, RidgeRegression
 from tqdm import tqdm
 import pickle
-from itertools import product
-
 
 # coordinate
 coord_axis_opts=["x-axis","y-axis"]
-
-# range of nthist(number of time bins for history)
-nthist_range=[3*i for i in range(17)[::2]]
 
 # data dir
 all_data_dir=Path('data/alldata/')
@@ -28,18 +27,19 @@ for data_dir in tqdm(datalist):
 
     time_bin_size=1/3 #second
     n_time_bins,n_cells = spikes.shape
-
+    design_mat_all=mk_design_matrix_decoder1(spikes)
+    
     results_all=[]
-    for nthist,coord_axis in product(nthist_range,coord_axis_opts):
-        design_mat_all=mk_design_matrix_decoder2(spikes,nthist) # design matrix with summed spikes
-        coord=coords_xy[:,0][nthist:] if coord_axis=="x-axis" else coords_xy[:,1][nthist:] # the length would shrink because of the nthist
+    for coord_axis in coord_axis_opts:
+        coord=coords_xy[:,0] if coord_axis=="x-axis" else coords_xy[:,1]
 
         train_size=int(n_time_bins/2)
+
         X_train,y_train=design_mat_all[:train_size],coord[:train_size]
         X_test,y_test=design_mat_all[train_size:],coord[train_size:]
 
-        penalty_range=[2**i for i in range(3,21)]
-        for p in penalty_range:
+        for p in [2**i for i in range(3,21)]:
+        # for p in range(1,10):
             rr=RidgeRegression()
             rr.fit(X_train,y_train,p)
             rr.predict(X_test)
@@ -47,14 +47,15 @@ for data_dir in tqdm(datalist):
 
             result_wrap={
                 "model_smry": model_smry,
-                "nthist": nthist,
-                "penalty": p,
                 "coord_axis": coord_axis,
                 "y_test": y_test
             }
             results_all.append(result_wrap)
 
-    # ---save results
-    with open(output_dir/(f"rr_summed_spikes_{data_name}.pickle"),"wb") as f:
+
+    # ---save theta(parameter) , prediction , test_data
+    with open(output_dir/(f"rr_raw_data_{data_name}.pickle"),"wb") as f:
         pickle.dump(results_all,f)
+    # with open(output_dir/(f"rr_original_pRange1-9_coor{coord_axis}_{data_name}.pickle"),"wb") as f:
+    #     pickle.dump([results_list,y_test],f)
 
