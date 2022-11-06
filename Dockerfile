@@ -33,7 +33,8 @@ RUN apt-get install -y \
     liblzma-dev \
     libreadline-dev \
     libsqlite3-dev \
-    python3-tk
+    python3-tk \
+    libbz2-dev
 
 # download python
 RUN wget https://www.python.org/ftp/python/3.8.5/Python-3.8.5.tar.xz \
