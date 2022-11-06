@@ -133,6 +133,27 @@ def mk_design_matrix_decoder2(spikes:np.array,nthist:int=0):
     design_mat_all_offset = np.hstack((np.ones((n_time_bins-nthist,1)), new_spikes))
     return design_mat_all_offset
 
+def mk_design_matrix_decoder3(spikes:np.array, coordinates: np.array, nthist:int=0) -> np.array:
+    """Make design matrix for decoder with past corrdinates.
+
+    Parameter:
+    ----------
+    spikes: np.array
+        that has neurons's spikes count data.
+    coordinates: np.array
+        x or y coordinate data
+    nthist: int
+        num of time bins for spikes history, default=0
+    """
+    n_time_bins, n_neurons = spikes.shape
+    design_m = np.zeros((n_time_bins - nthist,n_neurons+1))
+    for i in range(nthist,n_time_bins):
+        design_m[i-nthist,:-1] = spikes[i] # current spike
+        design_m[i-nthist,-1] = coordinates[i-nthist] # past coordinates
+
+    design_mat_all_offset = np.hstack((np.ones((n_time_bins-nthist,1)), design_m))
+    return design_mat_all_offset
+
 
 def cal_mse(prediction,observation):
     '''
