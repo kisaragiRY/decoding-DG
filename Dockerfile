@@ -44,6 +44,7 @@ RUN wget https://www.python.org/ftp/python/3.8.5/Python-3.8.5.tar.xz \
     && make install \
     && cd ../ \
     && rm -rf Python*
+RUN echo 'export PYTHONPATH="$WORKDIRE:$PYTHONPATH"' >> $HOME/.bashrc 
 
 
 # poetry
