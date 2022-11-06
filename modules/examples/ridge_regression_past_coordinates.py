@@ -1,6 +1,6 @@
 from pathlib import Path
 from modules.func import *
-from modules import Results, RidgeRegression
+from modules.decoder import Results, RidgeRegression
 from tqdm import tqdm
 import pickle
 from itertools import product
