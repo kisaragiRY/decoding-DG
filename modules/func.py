@@ -143,7 +143,7 @@ def mk_design_matrix_decoder3(spikes:np.array, coordinates: np.array, nthist:int
     coordinates: np.array
         x or y coordinate data
     nthist: int
-        num of time bins for spikes history, default=0
+        num of time bins for spikes history, default=1
     """
     n_time_bins, n_neurons = spikes.shape
     design_m = np.zeros((n_time_bins - nthist,n_neurons+1))
