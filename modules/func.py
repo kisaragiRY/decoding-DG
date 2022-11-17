@@ -133,7 +133,7 @@ def mk_design_matrix_decoder2(spikes:np.array,nthist:int=0):
     design_mat_all_offset = np.hstack((np.ones((n_time_bins-nthist,1)), new_spikes))
     return design_mat_all_offset
 
-def mk_design_matrix_decoder3(spikes:np.array, coordinates: np.array, nthist:int=0) -> np.array:
+def mk_design_matrix_decoder3(spikes:np.array, coordinates: np.array, nthist:int=1) -> np.array:
     """Make design matrix for decoder with past corrdinates.
 
     Parameter:
