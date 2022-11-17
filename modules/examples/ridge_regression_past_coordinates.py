@@ -10,7 +10,7 @@ from itertools import product
 coord_axis_opts=["x-axis","y-axis"]
 
 # range of nthist(number of time bins for history)
-nthist_range=[3*i for i in range(17)[::2]]
+nthist_range=np.arange(0,180,3)
 
 # data dir
 all_data_dir=Path('data/alldata/')
@@ -32,7 +32,10 @@ for data_dir in tqdm(datalist):
     results_all=[]
     for nthist,coord_axis in product(nthist_range,coord_axis_opts):
         coord=coords_xy[:,0][nthist:] if coord_axis=="x-axis" else coords_xy[:,1][nthist:] # the length would shrink because of the nthist
-        design_mat_all=mk_design_matrix_decoder3(spikes, coord, nthist) # design matrix with past coordinates
+        if nthist==0:
+            design_mat_all=mk_design_matrix_decoder1(spikes,nthist)
+        else:
+            design_mat_all=mk_design_matrix_decoder3(spikes, coord, nthist) # design matrix with past coordinates
 
         train_size=int(n_time_bins/2)
         X_train,y_train=design_mat_all[:train_size],coord[:train_size]
