@@ -1,0 +1,1 @@
+docker build -t dg-decoding:py3.8.5 -f Dockerfile .

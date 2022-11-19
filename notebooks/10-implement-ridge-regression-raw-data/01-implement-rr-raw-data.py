@@ -1,5 +1,5 @@
 """
-implement ridge regression without discretization of coordinates
+implement ridge regression with raw data
 """
 
 from pathlib import Path
