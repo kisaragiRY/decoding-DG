@@ -87,7 +87,7 @@ class Results:
         # get p-value from F-distribution
         p_value=stats.f.sf(F,p-1,n-p)
 
-        return np.array(p_value).ravel()[0]
+        return np.array(p_value).ravel()
 
     @cached_property
     def individual_sig(self):
@@ -118,7 +118,7 @@ class Results:
         # p-value list based on the t_list
         p_value_list=[stats.t.cdf(t,n-p) for t in t_list]
         
-        return np.array(p_value_list).ravel()[0]
+        return np.array(p_value_list).ravel()
 
 
     def summary(self):
