@@ -3,8 +3,6 @@ import pandas as pd
 import numpy as np
 from scipy.linalg import hankel
 from pathlib import Path
-
-from zmq import Errno
  
 def load_data(data_dir):
     '''
@@ -147,9 +145,9 @@ def mk_design_matrix_decoder3(spikes:np.array, coordinates: np.array, nthist:int
     """
     n_time_bins, n_neurons = spikes.shape
     design_m = np.zeros((n_time_bins - nthist,n_neurons+1))
-    for i in range(nthist,n_time_bins):
-        design_m[i-nthist,:-1] = spikes[i] # current spike
-        design_m[i-nthist,-1] = coordinates[i-nthist] # past coordinates
+    for i in range(n_time_bins - nthist):
+        design_m[i,:-1] = spikes[i + nthist] # current spike
+        design_m[i,-1] = coordinates[i] # past coordinates
 
     design_mat_all_offset = np.hstack((np.ones((n_time_bins-nthist,1)), design_m))
     return design_mat_all_offset
