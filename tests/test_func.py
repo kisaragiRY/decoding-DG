@@ -27,12 +27,13 @@ def test_design_matrix_decoder1(train_set):
     design_matrix=mk_design_matrix_decoder1(train_set[0],nthist)
     assert (design_matrix.shape[1]-1)==n_neurons
 
-@pytest.mark.parametrize("nthist",[1, 2, 3, 10, 20, 30])
+@pytest.mark.parametrize("nthist",[1])
 def test_design_matrix_decoder3(train_set, nthist):
     """Test function mk_design_matrix_decoder3.
 
     See whether the output is correct.
     """
-    design_matrix=mk_design_matrix_decoder3(train_set[0], train_set[1], nthist)
-    assert (train_set[0][nthist:] == design_matrix[:,1:-1]).any() # for spikes
-    assert (train_set[1][nthist:] == design_matrix[:,-1]).any() # for coordinate
+    spikes, coordinate = train_set
+    design_matrix=mk_design_matrix_decoder3(spikes, coordinate, nthist)
+    assert (spikes[nthist:] == design_matrix[:,1:-1]).all() # for spikes
+    assert (coordinate[:-nthist].ravel() == design_matrix[:,-1].ravel()).all() # for coordinate
