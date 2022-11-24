@@ -11,9 +11,9 @@ from scipy import stats
 class RidgeRegression():
     '''A linear guassian ridge model.
 
-    x_t=theta.T・n_t + b_t
+    x_t=fitted_param.T・n_t + b_t
     x_t: discretized position
-    theta: parameter
+    fitted_param: parameter
     n_t: spikes
     b_t: intercept
     '''
@@ -42,12 +42,12 @@ class RidgeRegression():
         tmp2=np.einsum("ji,ik->jk",self.X_train.T,self.y_train)
         try: 
             inv(tmp1+penalty*np.identity(len(tmp1)))
-            self.theta= np.einsum("ji,ik->j",inv(tmp1+penalty*np.identity(len(tmp1))),tmp2)
+            self.fitted_param = np.einsum("ji,ik->j",inv(tmp1+penalty*np.identity(len(tmp1))),tmp2)
             self.fitting=True # indicate whether the fitting is successfully conducted
 
         except: 
             self.fitting=False
-            self.theta= np.array([np.nan]*self.X_train.shape[1])
+            self.fitted_param= np.array([np.nan]*self.X_train.shape[1])
 
     def predict(self,X_test:np.array):
         '''Predicting using fitted parameters based on test data.
@@ -60,7 +60,7 @@ class RidgeRegression():
             test design matrix including one column full of 1 for the intercept
 
         '''
-        self.prediction=np.einsum("ij,j->i",X_test,self.theta)
+        self.prediction = np.einsum("ij,j->i",X_test,self.fitted_param)
 
 @dataclass
 class Results:
@@ -78,8 +78,8 @@ class Results:
         where ESS is explained sum of squares abd RSS is residual sum of squares.
         """
         n,p=self.model.X_train.shape
-        # Residual Sum of Squares=y'y-theta_hat'X'y
-        RSS=np.einsum("ji,ik->jk",self.model.y_train.T,self.model.y_train)-self.model.theta.dot(np.einsum("ji,ik->jk",self.model.X_train.T,self.model.y_train)) 
+        # Residual Sum of Squares=y'y-fitted_param_hat'X'y
+        RSS=np.einsum("ji,ik->jk",self.model.y_train.T,self.model.y_train)-self.model.fitted_param.dot(np.einsum("ji,ik->jk",self.model.X_train.T,self.model.y_train)) 
         # Explained sum of squares=∑(y_i-y_bar)
         ESS=np.sum(self.model.y_train-np.average(self.model.y_train))
         # Statistics
@@ -93,14 +93,14 @@ class Results:
     def individual_sig(self):
         """Run a hypothesis test for individual coefficients 
 
-        The statistics=t_i=theta_hat/(c_ii**.5 * sigma_hat) ~ t with n-p degree of freedom,
+        The statistics=t_i=fitted_param_hat/(c_ii**.5 * sigma_hat) ~ t with n-p degree of freedom,
         wheret heta_hat is the fitted parameter, c_ii is the diagnal elements of inv(X'X), 
         sigma_hat**2=RSS/(n-p).
         If |t_i|>t(alpha/2), refuse hypothesis.
         """
         n,p=self.model.X_train.shape
-        # Residual Sum of Squares=y'y-theta_hat'X'y
-        RSS=np.einsum("ji,ik->jk",self.model.y_train.T,self.model.y_train)-self.model.theta.dot(np.einsum("ji,ik->jk",self.model.X_train.T,self.model.y_train)) 
+        # Residual Sum of Squares=y'y-fitted_param_hat'X'y
+        RSS=np.einsum("ji,ik->jk",self.model.y_train.T,self.model.y_train)-self.model.fitted_param.dot(np.einsum("ji,ik->jk",self.model.X_train.T,self.model.y_train)) 
 
         try: 
             inv_tmp=inv(np.einsum("ji,ik->jk",self.model.X_train.T,self.model.X_train) + self.model.penalty*np.ones(p)) # (X'X+λI)^-1
@@ -113,8 +113,8 @@ class Results:
 
         # sigma
         sigma2=RSS/(n-p)
-        # list of t statistics for each element in theta_hat
-        t_list=[self.model.theta[i]/(C[i,i]*sigma2**.5) for i in range(len(self.model.theta))]
+        # list of t statistics for each element in fitted_param_hat
+        t_list=[self.model.fitted_param[i]/(C[i,i]*sigma2**.5) for i in range(len(self.model.fitted_param))]
         # p-value list based on the t_list
         p_value_list=[stats.t.cdf(t,n-p) for t in t_list]
         
@@ -128,8 +128,8 @@ class Results:
             "model name": "Ridge Regression",
             "fitting":self.model.fitting,
             "penalty":self.model.penalty,
-            "fitted parameter":self.model.theta,
-            "fitted error":cal_mse(np.einsum("ij,j->i",self.model.X_train,self.model.theta),self.model.y_train),
+            "fitted parameter":self.model.fitted_param,
+            "fitted error":cal_mse(np.einsum("ij,j->i",self.model.X_train,self.model.fitted_param),self.model.y_train),
             "overall sig":self.overall_sig,
             "individual sig":self.individual_sig,
             "prediction":self.model.prediction,
