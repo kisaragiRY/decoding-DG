@@ -5,9 +5,11 @@ from tqdm import tqdm
 import pickle
 from itertools import product
 from typing import Tuple
+from sklearn.model_selection import TimeSeriesSplit
 
 from param import *
 from modules.dataloader import PastCoordDataset
+from modules.model_selection import SearchCV
 
 def spilt_data(X: np.array, y: np.array, train_ratio: float) -> Tuple[Tuple[np.array,np.array],Tuple[np.array,np.array]]:
     """Get training and testing data."""
@@ -62,13 +64,22 @@ def main() -> None:
         data_name = str(data_dir).split('/')[-1]
 
         results_all=[]
-        for nthist, coord_axis in product(ParamTrain().nthist_range, coord_axis_opts):
+        for nthist, coord_axis in product(ParamData().nthist_range, coord_axis_opts):
             design_matrix, coord = PastCoordDataset(data_dir, coord_axis, nthist).data # load coordinates and spikes data
 
-            train_data, (X_test, y_test) = spilt_data(design_matrix, coord, .8)
+            X, y, (X_test, y_test) = spilt_data(design_matrix, coord, .8)
 
-            penalty_range=[i for i in np.arange(4,16,.2)]
-            for p in penalty_range:
+            # rolling origin cross validation(named time series split in sklearn)
+            tscv = TimeSeriesSplit(n_splits=10)
+
+            search = SearchCV(RidgeRegression(), ParamTrain().scoring, ParamTrain().penalty_range, tscv)
+            
+            for id_, (train_index, test_index) in enumerate(tscv.split(X)):
+                X_train, X_test = X[train_index], X[test_index]
+                y_train, y_test = y[train_index], y[test_index]
+
+                p = id_ * .2 + 4 # penalty  
+
                 rr = RidgeRegression()
                 rr.fit(X_train,y_train,p)
                 model_smry = Results(rr).summary()
