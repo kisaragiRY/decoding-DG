@@ -58,7 +58,7 @@ class PastCoordDataset:
         design_m = np.zeros((n_time_bins - self.nthist, n_neurons+1))
         if self.nthist !=0:
             design_m[:,:-1] = self.spikes[self.nthist:]
-            design_m[:,-1] = self.coord
+            design_m[:,-1] = self.coord[:-self.nthist]
         else:
             design_m = self.spikes
 
