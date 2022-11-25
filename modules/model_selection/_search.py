@@ -1,13 +1,13 @@
 from dataclasses import dataclass
-from typing import Union
 from copy import deepcopy
 from itertools import product
-from sklearn.model_selection import TimeSeriesSplit
 import numpy as np
+from tqdm import tqdm
 
 from modules.metrics import get_scorer
 from modules.decoder import RidgeRegression
 from ._split import RollingOriginSplit
+from ._sigtest import RidgeSigTest
 
 @dataclass
 class SearchCV:
@@ -35,10 +35,16 @@ class SearchCV:
         estimator.predict(X_test)
         y_pred = estimator.prediction
 
+        sig_tests = RidgeSigTest(estimator)
+
         result = {
             "train_scores": self.scorer(y_train, np.einsum("ij,j->i",X_train, fitted_param)),
             "test_scores" : self.scorer(y_test, y_pred),
             "fitted_param": fitted_param,
+            "F_stat" : sig_tests.f_stat,
+            "F_p_value": sig_tests.f_p_value,
+            "coeff_stats": sig_tests.t_stat_list,
+            "coeff_p_values": sig_tests.t_p_value_list
         }
 
         return result
@@ -47,7 +53,7 @@ class SearchCV:
         """Run search among cv splits and get the best parameters."""
         self.results = dict()
         min_score = np.inf
-        for id_, param, (train_indexes, test_indexes) in enumerate(product(self.candidate_params,self.cv.split(X))):
+        for id_, (param, (train_indexes, test_indexes)) in tqdm(enumerate(product(self.candidate_params,self.cv.split(X)))):
             result = self.fit_and_score(X, y, train_indexes, test_indexes, param)
 
             self.results[id_] = {
