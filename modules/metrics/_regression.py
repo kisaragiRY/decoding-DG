@@ -9,7 +9,7 @@ __ALL__ = [
 def _check_consistent_length(*arrays):
     """Check all the arrays have the same length."""
     lengths = [len(x) for x in arrays]
-    if (np.unique(lengths)) > 1:
+    if len(np.unique(lengths)) > 1:
         raise ValueError("Found input variables have inconsistent length.")
 
 def mean_square_error(y_true: np.array,y_pred: np.array) -> float:
