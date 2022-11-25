@@ -2,10 +2,7 @@ from dataclasses import dataclass
 from functools import cached_property
 import numpy as np
 from scipy.linalg import inv
-from pathlib import Path
-import pickle
 from .func import *
-from tqdm import tqdm
 from scipy import stats
 
 class RidgeRegression():
@@ -35,21 +32,21 @@ class RidgeRegression():
             the penalty added on ridge model
         '''
         self.X_train=X_train
-        self.y_train=y_train.reshape(-1,1)
+        self.y_train=y_train.ravel()
         self.penalty=penalty
 
         tmp1=np.einsum("ji,ik->jk",self.X_train.T,self.X_train)
-        tmp2=np.einsum("ji,ik->jk",self.X_train.T,self.y_train)
+        tmp2=np.einsum("ji,i->j",self.X_train.T,self.y_train)
         try: 
             inv(tmp1+penalty*np.identity(len(tmp1)))
-            self.fitted_param = np.einsum("ji,ik->j",inv(tmp1+penalty*np.identity(len(tmp1))),tmp2)
+            self.fitted_param = np.einsum("ji,i->j",inv(tmp1+penalty*np.identity(len(tmp1))),tmp2)
             self.fitting=True # indicate whether the fitting is successfully conducted
 
         except: 
             self.fitting=False
             self.fitted_param= np.array([np.nan]*self.X_train.shape[1])
 
-    def predict(self,X_test:np.array):
+    def predict(self, X_test: np.array):
         '''Predicting using fitted parameters based on test data.
         
         return the predicted results
@@ -60,7 +57,7 @@ class RidgeRegression():
             test design matrix including one column full of 1 for the intercept
 
         '''
-        self.prediction = np.einsum("ij,j->i",X_test,self.fitted_param)
+        self.prediction = np.einsum("ji,i->j", X_test, self.fitted_param)
 
 @dataclass
 class Results:
@@ -79,7 +76,7 @@ class Results:
         """
         n,p=self.model.X_train.shape
         # Residual Sum of Squares=y'y-fitted_param_hat'X'y
-        RSS=np.einsum("ji,ik->jk",self.model.y_train.T,self.model.y_train)-self.model.fitted_param.dot(np.einsum("ji,ik->jk",self.model.X_train.T,self.model.y_train)) 
+        RSS = self.model.y_train.dot(self.model.y_train) - self.model.fitted_param.dot(np.einsum("ji,ik->jk",self.model.X_train.T,self.model.y_train)) 
         # Explained sum of squares=∑(y_i-y_bar)
         ESS=np.sum(self.model.y_train-np.average(self.model.y_train))
         # Statistics
@@ -100,7 +97,7 @@ class Results:
         """
         n,p=self.model.X_train.shape
         # Residual Sum of Squares=y'y-fitted_param_hat'X'y
-        RSS=np.einsum("ji,ik->jk",self.model.y_train.T,self.model.y_train)-self.model.fitted_param.dot(np.einsum("ji,ik->jk",self.model.X_train.T,self.model.y_train)) 
+        RSS = self.model.y_train.dot(self.model.y_train) - self.model.fitted_param.dot(np.einsum("ji,i->j",self.model.X_train.T,self.model.y_train)) 
 
         try: 
             inv_tmp=inv(np.einsum("ji,ik->jk",self.model.X_train.T,self.model.X_train) + self.model.penalty*np.ones(p)) # (X'X+λI)^-1
