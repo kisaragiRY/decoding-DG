@@ -24,7 +24,7 @@ class RidgeSigTest:
         # Residual Sum of Squares=y'y-fitted_param_hat'X'y
         RSS = self.model.y_train.dot(self.model.y_train) - self.model.fitted_param.dot(np.einsum("ji,i->j ", self.model.X_train.T, self.model.y_train)) 
         # Explained sum of squares=∑(y_i-y_bar)
-        ESS = np.sum(self.model.y_train - np.average(self.model.y_train))
+        ESS = np.sum((self.model.y_train - np.average(self.model.y_train))**2)
         # Statistics
         self.f_stat = ((ESS - RSS) / (p-1)) / (RSS / (n-p))
         # get p-value from F-distribution
@@ -57,29 +57,3 @@ class RidgeSigTest:
         self.t_stat_list = [self.model.fitted_param[i] / (C[i,i] * sigma2 ** .5) for i in range(len(self.model.fitted_param))]
         # p-value list based on the t_list
         self.t_p_value_list = [stats.t.cdf(t,n-p) for t in self.t_stat_list]
-
-if __name__ == "__main__":
-    from _search import SearchCV
-    from modules.metrics import get_scorer
-
-    n_neurons=30
-    time_bins_train=100
-    time_bins_test=80
-    n_positions=4
-    X = np.random.rand(time_bins_train,n_neurons)
-    y = np.random.uniform(low=-40, high=40, size=(time_bins_train,1))
-    train_index, test_index, hyper_param = range(30), range(30,31), 5
-
-    search = SearchCV(RidgeRegression(), "mean_square_error", np.arange(4,18,.2), 10)
-    result = search.fit_and_score(X, y, train_index, test_index, hyper_param)
-
-    X_train, X_test = X[train_index], X[test_index]
-    y_train, y_test = y[train_index].ravel(), y[test_index].ravel()
-
-    rr = RidgeRegression()
-    rr.fit(X_train, y_train, hyper_param)
-    rr.predict(X_test)
-
-    scorer = get_scorer("mean_square_error")
-    train_scores = scorer(y_train, np.einsum("ij,j->i",X_train, rr.fitted_param))
-    test_scores = scorer(y_test, rr.prediction)
