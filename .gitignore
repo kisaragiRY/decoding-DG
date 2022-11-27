@@ -6,6 +6,6 @@ data
 
 ._data
 
-output/data
+output/
 
 .nfs*
