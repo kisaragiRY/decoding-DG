@@ -42,7 +42,8 @@ class SearchCV:
             "test_scores" : self.scorer(y_test, y_pred),
             "fitted_param": fitted_param,
             "hyper_param": hyper_param,
-            "F_stat" : sig_tests.f_stat,
+            "RSS": sig_tests.RSS,
+            "F_stat": sig_tests.f_stat,
             "F_p_value": sig_tests.f_p_value,
             "coeff_stats": sig_tests.t_stat_list,
             "coeff_p_values": sig_tests.t_p_value_list

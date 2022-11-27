@@ -17,18 +17,27 @@ class RidgeSigTest:
     def _model_sig(self) -> None:
         """Run a hypothesis test for the model coefficients in the model.
 
-        The statistics=[(ESS-RSS)/(p-1)] / [RSS/(n-p)] ~ F-distribution(p-1,n-p),
+        The statistics=[(ESS-RSS)/(p-1)] / [RSS/df_model] ~ F-distribution(p-1,df_model),
         where ESS is explained sum of squares abd RSS is residual sum of squares.
         """
         n, p = self.model.X_train.shape
-        # Residual Sum of Squares=y'y-fitted_param_hat'X'y
-        RSS = self.model.y_train.dot(self.model.y_train) - self.model.fitted_param.dot(np.einsum("ji,i->j ", self.model.X_train.T, self.model.y_train)) 
-        # Explained sum of squares=∑(y_i-y_bar)
+        # Residual Sum of Squares = (y-Xw)'(y-Xw)
+        RSS_tmp = self.model.y_train - np.einsum("ij,j->i", self.model.X_train , self.model.fitted_param)
+        self.RSS = RSS_tmp.dot(RSS_tmp)
+
+        # Explained sum of squares=∑(y_i-y_bar)^2
         ESS = np.sum((self.model.y_train - np.average(self.model.y_train))**2)
+
+        # degree of freedom of the model
+        self.C = inv(np.einsum("ji,ik->jk", self.model.X_train.T, self.model.X_train) + self.model.penalty * np.identity(p)) 
+        H = np.einsum_path("ij,jk,kl -> il", self.model.X_train, self.C, self.model.X_train.T) # hat matrix
+        self.df_model = n - np.trace(2 * H - np.einsum("ij,jk -> ik", H, H.T))
+
         # Statistics
-        self.f_stat = ((ESS - RSS) / (p-1)) / (RSS / (n-p))
+        self.f_stat = ((ESS - self.RSS) / (p-1)) / (self.RSS / self.df_model)
+
         # get p-value from F-distribution
-        self.f_p_value = stats.f.sf(self.f_stat,p-1,n-p)
+        self.f_p_value = stats.f.sf(self.f_stat, p-1, self.df_model)
 
     def _coeff_sig(self) -> None:
         """Run a hypothesis test for coeff coefficients 
@@ -39,21 +48,12 @@ class RidgeSigTest:
         If |t_i|>t(alpha/2), refuse hypothesis.
         """
         n, p = self.model.X_train.shape
-        # Residual Sum of Squares=y'y-fitted_param_hat'X'y
-        RSS = self.model.y_train.dot(self.model.y_train) - self.model.fitted_param.dot(np.einsum("ji,i->j", self.model.X_train.T, self.model.y_train)) 
 
-        try: 
-            inv_tmp = inv(np.einsum("ji,ik->jk", self.model.X_train.T, self.model.X_train) + self.model.penalty * np.ones(p)) # (X'X+λI)^-1
-            tmp1 = np.einsum("ji,ik->jk", inv_tmp, self.model.X_train.T) # inv_tmp@X'
-            tmp2 = np.einsum("ji,ik->jk", self.model.X_train, inv_tmp) # X@inv_tmp
-            C = np.einsum("ji,ik->jk", tmp1, tmp2)
-        except:
-            C = np.empty((p, p))
-            C[:] = np.nan
+        # estimate of sigma(sd of estimated coefficient)
+        sigma = (self.RSS / self.df_model) ** .5
 
-        # sigma
-        sigma2 = RSS / (n-p)
         # list of t statistics for each element in fitted_param_hat
-        self.t_stat_list = [self.model.fitted_param[i] / (C[i,i] * sigma2 ** .5) for i in range(len(self.model.fitted_param))]
+        self.t_stat_list = [self.model.fitted_param[i] / (self.C[i,i] * sigma) for i in range(p)]
+
         # p-value list based on the t_list
-        self.t_p_value_list = [stats.t.cdf(t,n-p) for t in self.t_stat_list]
+        self.t_p_value_list = [stats.t.cdf(t, self.df_model) for t in self.t_stat_list]
