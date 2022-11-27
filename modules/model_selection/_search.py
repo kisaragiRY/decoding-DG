@@ -41,6 +41,7 @@ class SearchCV:
             "train_scores": self.scorer(y_train, np.einsum("ij,j->i",X_train, fitted_param)),
             "test_scores" : self.scorer(y_test, y_pred),
             "fitted_param": fitted_param,
+            "hyper_param": hyper_param,
             "F_stat" : sig_tests.f_stat,
             "F_p_value": sig_tests.f_p_value,
             "coeff_stats": sig_tests.t_stat_list,
@@ -56,11 +57,10 @@ class SearchCV:
         for id_, (param, (train_indexes, test_indexes)) in tqdm(enumerate(product(self.candidate_params,self.cv.split(X)))):
             result = self.fit_and_score(X, y, train_indexes, test_indexes, param)
 
-            self.results[id_] = {
-                "fit_and_score": result,
-                "hyper_param": param,
-                }
+            self.results[id_] = result
+
+            # get the best result with lowest test_scores
             if result["test_scores"] <= min_score:
                 min_score = result["test_scores"]
-                self.best_result = self.results[id_]
+                self.best_result = result
                 
