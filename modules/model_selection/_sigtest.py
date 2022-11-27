@@ -30,7 +30,7 @@ class RidgeSigTest:
 
         # degree of freedom of the model
         self.C = inv(np.einsum("ji,ik->jk", self.model.X_train.T, self.model.X_train) + self.model.penalty * np.identity(p)) 
-        H = np.einsum_path("ij,jk,kl -> il", self.model.X_train, self.C, self.model.X_train.T) # hat matrix
+        H = np.einsum("ij,jk,kl -> il", self.model.X_train, self.C, self.model.X_train.T) # hat matrix
         self.df_model = n - np.trace(2 * H - np.einsum("ij,jk -> ik", H, H.T))
 
         # Statistics
