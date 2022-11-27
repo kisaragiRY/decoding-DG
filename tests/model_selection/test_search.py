@@ -19,7 +19,7 @@ def train_set():
     return X, y
 
 @pytest.mark.parametrize("train_index, test_index, hyper_param", 
-                        [[range(30), range(30,31), 5],[range(40), range(40,41), 6]])
+                        [[range(35), range(35,36), 5],[range(99), range(99,100), 6]])
 def test_fit_and_score(train_set, train_index, test_index, hyper_param):
     X ,y = train_set
     search = SearchCV(RidgeRegression(), ParamTrain().scoring, ParamTrain().penalty_range, 10)
