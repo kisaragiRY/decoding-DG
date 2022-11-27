@@ -9,16 +9,16 @@ class ParamDir:
     OUTPUT_DIR : Path = Path("output/ridge_regression/")
 
     def __post_init__(self) -> None:
-        self.data_path_list = [x for x in self.DATA_DIR.iterdir()]
+        self.data_path_list = np.array([x for x in self.DATA_DIR.iterdir()])
 
 @dataclass
 class ParamData:
     """Param for setting up dataset."""
-    nthist_range = np.arange(0,18,3)
+    nthist_range = np.arange(0,12,3)
 
 @dataclass
 class ParamTrain:
     """Param for training model."""
     # range of nthist(number of time bins for history)
-    penalty_range = np.arange(4,10,.2)
+    penalty_range = np.arange(.1,5,.1)
     scoring = "mean_square_error"

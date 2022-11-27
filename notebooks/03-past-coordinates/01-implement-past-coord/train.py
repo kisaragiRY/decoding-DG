@@ -30,17 +30,17 @@ def main() -> None:
         output_dir.mkdir()
 
     # get the regression results for all the mice
-    for data_dir in tqdm(datalist):
+    for data_dir in tqdm(datalist[[0,2]]):
         data_name = str(data_dir).split('/')[-1]
 
         results_all=[]
         for nthist, coord_axis in product(ParamData().nthist_range, coord_axis_opts):
             design_matrix, coord = PastCoordDataset(data_dir, coord_axis, nthist).data # load coordinates and spikes data
 
-            (X, y), (_, _) = spilt_data(design_matrix, coord, .8)
+            (X_train, y_train), (_, _) = spilt_data(design_matrix, coord, .8)
 
             search = SearchCV(RidgeRegression(), ParamTrain().scoring, ParamTrain().penalty_range, 10)
-            search.evaluate_candidates(X, y)
+            search.evaluate_candidates(X_train, y_train)
             results_all.append((search.best_result, nthist, coord_axis))
 
         # ---save results
