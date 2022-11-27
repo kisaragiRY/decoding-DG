@@ -37,11 +37,11 @@ def main() -> None:
         for nthist, coord_axis in product(ParamData().nthist_range, coord_axis_opts):
             design_matrix, coord = PastCoordDataset(data_dir, coord_axis, nthist).data # load coordinates and spikes data
 
-            (X, y), (X_test, y_test) = spilt_data(design_matrix, coord, .8)
+            (X, y), (_, _) = spilt_data(design_matrix, coord, .8)
 
             search = SearchCV(RidgeRegression(), ParamTrain().scoring, ParamTrain().penalty_range, 10)
             search.evaluate_candidates(X, y)
-            results_all.append(search.best_result)
+            results_all.append((search.best_result, nthist, coord_axis))
 
         # ---save results
         with open(output_dir/(f"rr_past_coord_{data_name}.pickle"),"wb") as f:
