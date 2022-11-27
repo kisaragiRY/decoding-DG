@@ -33,5 +33,5 @@ class RollingOriginSplit:
         fold_size = int( len(X) / self.n_split )
         for id_fold in range(self.n_split):
             id_index = ( id_fold + 1 ) * fold_size
-            train_indexes, test_indexes = range(id_index), range(id_index, id_index+1)
+            train_indexes, test_indexes = range(id_index-1), range(id_index-1, id_index)
             yield  train_indexes, test_indexes
