@@ -39,7 +39,7 @@ def main() -> None:
 
             (X_train, y_train), (_, _) = spilt_data(design_matrix, coord, .8)
 
-            search = SearchCV(RidgeRegression(), ParamTrain().scoring, ParamTrain().penalty_range, 10)
+            search = SearchCV(RidgeRegression(), ParamTrain().scoring, ParamTrain().penalty_range, ParamTrain().n_split)
             search.evaluate_candidates(X_train, y_train)
             results_all.append((search.best_result, nthist, coord_axis))
 
