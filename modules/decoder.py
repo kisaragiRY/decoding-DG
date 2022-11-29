@@ -4,7 +4,7 @@ from scipy import stats
 from typing import Tuple
 
 from .func import *
-from metrics import get_scorer
+from .metrics import get_scorer
 
 class RidgeRegression():
     '''A linear guassian ridge model.
@@ -18,7 +18,7 @@ class RidgeRegression():
     def __init__(self) -> None:
         self.fitted_param = None
 
-    def fit(self,X_train:np.array,y_train:np.array,penalty:float):
+    def fit(self, X_train: np.array, y_train: np.array, penalty: float):
         '''Fitting based on training data.
         
         return the fitted coefficients
@@ -44,7 +44,7 @@ class RidgeRegression():
             self.fitting=True # indicate whether the fitting is successfully conducted
 
         except: 
-            self.fitting =False
+            self.fitting = False
             self.fitted_param = np.array([np.nan]*self.X_train.shape[1])
 
     def predict(self, X_test: np.array):
@@ -64,10 +64,10 @@ class RidgeRegression():
         self.fitted_param = fitted_param
 
     def evaluate(self, X_test: np.array, y_test: np.array, scoring: str) -> Tuple[np.array]:
-        if self.fitted_param:
+        if self.fitted_param is None:
+            raise ValueError("fitted parameters are not loaded, please call load() first.")
+        else:
             y_pred = np.einsum("ji,i->j", X_test, self.fitted_param)
             scorer = get_scorer(scoring)
             test_scores = scorer(y_test, y_pred)
             return test_scores, y_pred
-        else:
-            raise ValueError("fitted parameters are not loaded, please call load() first.")
