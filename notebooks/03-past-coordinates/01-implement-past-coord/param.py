@@ -5,6 +5,7 @@ import numpy as np
 @dataclass
 class ParamDir:
     """Param for directory."""
+    ROOT : Path = Path("/work")
     DATA_DIR : Path = Path('data/alldata/')
     OUTPUT_DIR : Path = Path("output/ridge_regression/")
 
@@ -14,14 +15,14 @@ class ParamDir:
 @dataclass
 class ParamData:
     """Param for setting up dataset."""
-    nthist_range = [0,1]
+    nthist_range = range(6)
 
 @dataclass
 class ParamTrain:
     """Param for training model."""
     # range of nthist(number of time bins for history)
     n_split : int = 5
-    penalty_range = np.arange(1,4,.5)
+    penalty_range = np.arange(.1, 1.2,.2)
     scoring = "mean_square_error"
     train_size = .8
 
