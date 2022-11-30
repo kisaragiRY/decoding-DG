@@ -4,23 +4,6 @@ from typing import Tuple
 import numpy as np
 import pandas as pd
 
-def load_data(data_dir):
-    '''
-    load coordinates and spike data
-    '''
-    coords_df = pd.read_excel(data_dir/'position.xlsx')
-    coords=coords_df.values[3:,1:3] # only take the X,Y axis data
-
-    spikes_df = pd.read_excel(data_dir/'traces.xlsx',index_col=0)
-    spikes = spikes_df.values
-
-    # make sure spike and postion data have the same length
-    n_bins = min(len(coords),len(spikes))
-    coords = coords[:n_bins]
-    spikes = spikes[:n_bins]
-
-    return coords,spikes
-
 def _is_valid_axis(coord_axis: str) -> bool:
     """Check whether the axis is valid.
     
@@ -47,7 +30,7 @@ class PastCoordDataset:
         the number of history bins
     
     """
-    datadir : Path
+    data_dir : Path
     coord_axis : str
     nthist : int
 
@@ -75,7 +58,7 @@ class PastCoordDataset:
         design_m = np.zeros((n_time_bins - self.nthist, n_neurons+1))
         if self.nthist !=0:
             design_m[:,:-1] = self.spikes[self.nthist:]
-            design_m[:,-1] = self.coord
+            design_m[:,-1] = self.coord[:-self.nthist]
         else:
             design_m = self.spikes
 
@@ -84,9 +67,24 @@ class PastCoordDataset:
 
     def load_all_data(self) -> Tuple[np.array, np.array]:
         """Load design matrix and corresponding response(coordinate)."""
-        coords_xy, self.spikes = load_data(self.data_dir)
+        coords_xy, self.spikes = self._load_data()
         self.coord = coords_xy[:,self.axis]
         return self.design_matrix, self.coord[self.nthist:]
+
+    def _load_data(self) -> Tuple[np.array, np.array]:
+        """Load coordinates and spike data."""
+        coords_df = pd.read_excel(self.data_dir/'position.xlsx')
+        coords=coords_df.values[3:,1:3] # only take the X,Y axis data
+
+        spikes_df = pd.read_excel(self.data_dir/'traces.xlsx',index_col=0)
+        spikes = spikes_df.values
+
+        # make sure spike and postion data have the same length
+        n_bins = min(len(coords),len(spikes))
+        coords = coords[:n_bins]
+        spikes = spikes[:n_bins]
+
+        return coords,spikes
 
     
 

@@ -21,4 +21,4 @@ class ParamTrain:
     """Param for training model."""
     # range of nthist(number of time bins for history)
     penalty_range = np.arange(4,18,.2)
-    scoring = "mean_sqaure_error"
+    scoring = "mean_square_error"

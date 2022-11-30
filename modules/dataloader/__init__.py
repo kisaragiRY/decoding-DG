@@ -1,3 +1,3 @@
-from dataset import PastCoordDataset
+from .dataset import PastCoordDataset
 
 __all__ = ["PastCoordDataset"]
