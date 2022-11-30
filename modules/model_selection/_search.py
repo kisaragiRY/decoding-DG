@@ -3,6 +3,7 @@ from copy import deepcopy
 from itertools import product
 import numpy as np
 from tqdm import tqdm
+from joblib import Parallel, delayed
 
 from modules.metrics import get_scorer
 from modules.decoder import RidgeRegression
@@ -22,12 +23,10 @@ class SearchCV:
         self.scorer = get_scorer(self.scoring)
         self.cv = RollingOriginSplit(self.n_split)
 
-    def fit_and_score(self, X, y, train_indexes, test_indexes, hyper_param) -> dict:
+    def fit_and_score(self, estimator: RidgeRegression, X: np.array, y: np.array, train_indexes: range, test_indexes: range, hyper_param: float) -> dict:
         """Fit estimator and compute scores for a given dataset split."""
         X_train, X_test = X[train_indexes], X[test_indexes]
         y_train, y_test = y[train_indexes], y[test_indexes]
-
-        estimator = deepcopy(self.estimator)
 
         estimator.fit(X_train,y_train, hyper_param)
         fitted_param = estimator.fitted_param
@@ -48,20 +47,32 @@ class SearchCV:
             "coeff_stats": sig_tests.t_stat_list,
             "coeff_p_values": sig_tests.t_p_value_list
         }
-
         return result
     
     def evaluate_candidates(self, X, y):
         """Run search among cv splits and get the best parameters."""
-        self.results = dict()
-        min_score = np.inf
-        for id_, (param, (train_indexes, test_indexes)) in tqdm(enumerate(product(self.candidate_params,self.cv.split(X)))):
-            result = self.fit_and_score(X, y, train_indexes, test_indexes, param)
 
-            self.results[id_] = result
+        parallel = Parallel(n_jobs=-1)
+        self.out = parallel(delayed(self.fit_and_score)(
+                    train_indexes, 
+                    test_indexes, 
+                    param
+                ) 
+                for param, (train_indexes, test_indexes) in 
+                tqdm(product(self.candidate_params, self.cv(X))))
 
-            # get the best result with lowest test_scores
-            if result["test_scores"] <= min_score:
-                min_score = result["test_scores"]
-                self.best_result = result
+    def _aggregate_result(self):
+        """Aggregate results to a dict."""
+        agg_out = {key: [result[key] for result in self.out] for key in self.out[0]}
+        return agg_out
+    
+    @property
+    def best_result(self):
+        """Get the best result with lowest test_scores"""
+        agg_out = self._aggregate_result(self.out)
+        best_index = agg_out["test_scores"].argmin()
+        return self.out[best_index]
+        
+
+
                 
