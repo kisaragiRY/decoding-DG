@@ -12,7 +12,13 @@ class ParamDir:
         self.data_path_list=[x for x in self.DATA_DIR.iterdir()]
 
 @dataclass
+class ParamData:
+    """Param for setting up dataset."""
+    nthist_range = np.arange(0,18,3)
+
+@dataclass
 class ParamTrain:
     """Param for training model."""
     # range of nthist(number of time bins for history)
-    nthist_range = np.arange(0,18,3)
+    penalty_range = np.arange(4,18,.2)
+    scoring = "mean_sqaure_error"

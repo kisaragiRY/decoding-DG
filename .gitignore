@@ -4,10 +4,8 @@ data
 ._.DS_Store
 **/__pycache__
 
-data_RGCs/
-TestProjects/
-._data_RGCs
+._data
 
-output/data
+output/
 
 .nfs*
