@@ -107,7 +107,7 @@ class PastCoordDataset:
 
     def __post_init__(self) -> None:
         """Post precessing."""
-        self.coords_xy = self._load_data
+        self.coords_xy = self._load_data()
 
     def design_matrix(self, nthist: int) -> np.array:
         """Make design matrix for decoder with past corrdinates.
