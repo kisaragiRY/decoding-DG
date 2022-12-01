@@ -22,17 +22,16 @@ class RidgeSigTest:
         """
         n, p = self.model.X_train.shape
         # Residual Sum of Squares = (y-Xw)'(y-Xw)
-        RSS_tmp = self.model.y_train - np.einsum("ij,j->i", self.model.X_train , self.model.fitted_param)
+        RSS_tmp = self.model.y_train - self.model.X_train @ self.model.fitted_param
         self.RSS = RSS_tmp.dot(RSS_tmp)
 
         # Explained sum of squares=∑(y_i-y_bar)^2
         ESS = np.sum((self.model.y_train - np.average(self.model.y_train))**2)
 
         # degree of freedom of the model
-        self.C = inv(np.einsum("ji,ik->jk", self.model.X_train.T, self.model.X_train) + self.model.penalty * np.identity(p)) 
-        H_tmp = np.einsum("ji,ik->jk", self.model.X_train, self.C)
-        H = np.einsum("ji,ik->jk", H_tmp, self.model.X_train.T)
-        self.df_model = n - np.trace(2 * H - np.einsum("ij,jk -> ik", H, H.T))
+        self.C = inv(self.model.X_train.T @ self.model.X_train) + self.model.penalty * np.identity(p)
+        H = self.model.X_train @ self.C @ self.model.X_train.T
+        self.df_model = n - np.trace(2 * H - H @ H)
 
         # Statistics
         self.f_stat = ((ESS - self.RSS) / (p-1)) / (self.RSS / self.df_model)
