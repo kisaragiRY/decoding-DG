@@ -69,6 +69,7 @@ class SpikesPastCoordDataset:
     def load_all_data(self) -> Tuple[np.array, np.array]:
         """Load design matrix and corresponding response(coordinate)."""
         coords_xy, self.spikes = self._load_data()
+<<<<<<< HEAD
         self.coord = coords_xy[:,self.axis]
         return self.design_matrix, self.coord[self.nthist:]
 
@@ -145,6 +146,11 @@ class PastCoordDataset:
         return self.design_matrix, self.coord[self.nthist:]
 
     @cached_property
+=======
+        self.coord = coords_xy[:,self.axis]
+        return self.design_matrix, self.coord[self.nthist:]
+
+>>>>>>> 1216e0547befbf579edaed9d3984dac5928e9795
     def _load_data(self) -> Tuple[np.array, np.array]:
         """Load coordinates and spike data."""
         coords_df = pd.read_excel(self.data_dir/'position.xlsx')
@@ -159,6 +165,10 @@ class PastCoordDataset:
         spikes = spikes[:n_bins]
 
         return coords,spikes
+<<<<<<< HEAD
+=======
+
+>>>>>>> 1216e0547befbf579edaed9d3984dac5928e9795
     
 
 
