@@ -30,11 +30,12 @@ def main() -> None:
 
     # get the regression results for all the mice
     for data_dir in tqdm(datalist[[0,2]]):
+        dataset = PastCoordDataset(data_dir)
         data_name = str(data_dir).split('/')[-1]
 
         results_all=[]
         for nthist in tqdm(ParamData().nthist_range):
-            design_matrix, coord = PastCoordDataset(data_dir, coord_axis, nthist).data # load coordinates and spikes data
+            design_matrix, coord = dataset.load_all_data(coord_axis, nthist) # load coordinates and spikes data
 
             (X_train, y_train), (_, _) = spilt_data(design_matrix, coord, .8)
 
