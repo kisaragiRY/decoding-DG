@@ -41,11 +41,7 @@ class SearchCV:
             "test_scores" : self.scorer(y_test, y_pred),
             "fitted_param": fitted_param,
             "hyper_param": hyper_param,
-            "RSS": sig_tests.RSS,
-            "F_stat": sig_tests.f_stat,
-            "F_p_value": sig_tests.f_p_value,
-            "coeff_stats": sig_tests.t_stat_list,
-            "coeff_p_values": sig_tests.t_p_value_list
+            "estimator" : estimator
         }
         return result
     
@@ -77,7 +73,19 @@ class SearchCV:
         else:
             agg_out = self._aggregate_result()
             best_index = np.argmin(agg_out["test_scores"])
-        return self.out[best_index]
+            best_result = self.out[best_index]
+
+            sig_tests = RidgeSigTest(best_result["estimator"])
+            more_results ={
+                "RSS": sig_tests.RSS,
+                "F_stat": sig_tests.f_stat,
+                "F_p_value": sig_tests.f_p_value,
+                "coeff_stats": sig_tests.t_stat_list,
+                "coeff_p_values": sig_tests.t_p_value_list,
+            }
+            best_result.update(more_results)
+
+        return best_result
         
 
 
