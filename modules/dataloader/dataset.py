@@ -74,10 +74,10 @@ class SpikesPastCoordDataset:
 
     def _load_data(self) -> Tuple[np.array, np.array]:
         """Load coordinates and spike data."""
-        coords_df = pd.read_excel(self.data_dir/'position.xlsx')
+        coords_df = pd.read_excel(self.data_dir/'position.csv')
         coords=coords_df.values[3:,1:3] # only take the X,Y axis data
 
-        spikes_df = pd.read_excel(self.data_dir/'traces.xlsx',index_col=0)
+        spikes_df = pd.read_excel(self.data_dir/'traces.csv',index_col=0)
         spikes = spikes_df.values
 
         # make sure spike and postion data have the same length
@@ -146,10 +146,10 @@ class PastCoordDataset:
     @cached_property
     def _load_data(self) -> Tuple[np.array, np.array]:
         """Load coordinates and spike data."""
-        coords_df = pd.read_excel(self.data_dir/'position.xlsx')
+        coords_df = pd.read_excel(self.data_dir/'position.csv')
         coords=coords_df.values[3:,1:3] # only take the X,Y axis data
 
-        spikes_df = pd.read_excel(self.data_dir/'traces.xlsx',index_col=0)
+        spikes_df = pd.read_excel(self.data_dir/'traces.csv',index_col=0)
         spikes = spikes_df.values
 
         # make sure spike and postion data have the same length
