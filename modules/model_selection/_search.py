@@ -13,7 +13,6 @@ from ._sigtest import RidgeSigTest
 @dataclass
 class SearchCV:
     """Find the best params with cross validation."""
-    estimator: RidgeRegression
     scoring: str
     candidate_params: list
     n_split : int
@@ -22,6 +21,7 @@ class SearchCV:
         """Post processing."""
         self.scorer = get_scorer(self.scoring)
         self.cv = RollingOriginSplit(self.n_split)
+        self.out = None
 
     def fit_and_score(self, estimator: RidgeRegression, X: np.array, y: np.array, train_indexes: range, test_indexes: range, hyper_param: float) -> dict:
         """Fit estimator and compute scores for a given dataset split."""
@@ -54,12 +54,15 @@ class SearchCV:
 
         parallel = Parallel(n_jobs=-1)
         self.out = parallel(delayed(self.fit_and_score)(
+                    RidgeRegression(),
+                    X,
+                    y,
                     train_indexes, 
                     test_indexes, 
                     param
                 ) 
                 for param, (train_indexes, test_indexes) in 
-                tqdm(product(self.candidate_params, self.cv(X))))
+                tqdm(product(self.candidate_params, self.cv.split(X))))
 
     def _aggregate_result(self):
         """Aggregate results to a dict."""
@@ -69,8 +72,11 @@ class SearchCV:
     @property
     def best_result(self):
         """Get the best result with lowest test_scores"""
-        agg_out = self._aggregate_result(self.out)
-        best_index = agg_out["test_scores"].argmin()
+        if self.out is None:
+            raise ValueError("evaluate_candidates is not implemented.")
+        else:
+            agg_out = self._aggregate_result()
+            best_index = np.argmin(agg_out["test_scores"])
         return self.out[best_index]
         
 
