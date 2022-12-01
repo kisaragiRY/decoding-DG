@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from functools import cached_property
 from pathlib import Path
 from typing import Tuple
 import numpy as np
@@ -108,7 +107,7 @@ class PastCoordDataset:
 
     def __post_init__(self) -> None:
         """Post precessing."""
-        pass
+        self.coords_xy = self._load_data
 
     def design_matrix(self, nthist: int) -> np.array:
         """Make design matrix for decoder with past corrdinates.
@@ -136,11 +135,9 @@ class PastCoordDataset:
             raise ValueError("The coord_axis can either be 'x-axis' or 'y-axis'.")
 
         self.axis = 0 if coord_axis == "x-axis" else 1
-        coords_xy = self._load_data
-        self.coord = coords_xy[:, self.axis]
+        self.coord = self.coords_xy[:, self.axis]
         return self.design_matrix(nthist), self.coord[nthist:]
 
-    @cached_property
     def _load_data(self) -> Tuple[np.array, np.array]:
         """Load coordinates and spike data."""
         coords_df = pd.read_csv(self.data_dir/'position.csv', index_col=0)
