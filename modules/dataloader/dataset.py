@@ -105,18 +105,12 @@ class PastCoordDataset:
     
     """
     data_dir : Path
-    coord_axis : str
-    nthist : int
 
     def __post_init__(self) -> None:
         """Post precessing."""
-        if not _is_valid_axis(self.coord_axis):
-            raise ValueError("The coord_axis can either be 'x-axis' or 'y-axis'.")
-        self.axis = 0 if self.coord_axis == "x-axis" else 1
-        self.data = self.load_all_data()
+        pass
 
-    @property
-    def design_matrix(self) -> np.array:
+    def design_matrix(self, nthist: int) -> np.array:
         """Make design matrix for decoder with past corrdinates.
 
         Parameter:
@@ -128,20 +122,23 @@ class PastCoordDataset:
         nthist: int
             num of time bins for spikes history
         """
-        n_time_bins, _ = self.spikes.shape
-        if self.nthist !=0:
-            design_m = self.coord[:-self.nthist].reshape(-1,1)
+        if nthist !=0:
+            design_m = self.coord[:-nthist].reshape(-1,1)
         else:
             raise ValueError("nthist must be larger than 0.")
 
-        design_mat_all_offset = np.hstack((np.ones((n_time_bins-self.nthist,1)), design_m))
+        design_mat_all_offset = np.hstack((np.ones((len(self.coord)-nthist,1)), design_m))
         return design_mat_all_offset
 
-    def load_all_data(self) -> Tuple[np.array, np.array]:
+    def load_all_data(self, coord_axis : str, nthist : int) -> Tuple[np.array, np.array]:
         """Load design matrix and corresponding response(coordinate)."""
-        coords_xy, self.spikes = self._load_data
-        self.coord = coords_xy[:,self.axis]
-        return self.design_matrix, self.coord[self.nthist:]
+        if not _is_valid_axis(coord_axis):
+            raise ValueError("The coord_axis can either be 'x-axis' or 'y-axis'.")
+
+        self.axis = 0 if coord_axis == "x-axis" else 1
+        coords_xy = self._load_data
+        self.coord = coords_xy[:, self.axis]
+        return self.design_matrix(nthist), self.coord[nthist:]
 
     @cached_property
     def _load_data(self) -> Tuple[np.array, np.array]:
@@ -149,15 +146,7 @@ class PastCoordDataset:
         coords_df = pd.read_csv(self.data_dir/'position.csv', index_col=0)
         coords = coords_df.values[3:,1:3] # only take the X,Y axis data
 
-        spikes_df = pd.read_csv(self.data_dir/'traces.csv', index_col=0)
-        spikes = spikes_df.values
-
-        # make sure spike and postion data have the same length
-        n_bins = min(len(coords),len(spikes))
-        coords = coords[:n_bins]
-        spikes = spikes[:n_bins]
-
-        return coords,spikes
+        return coords
 
 
 
