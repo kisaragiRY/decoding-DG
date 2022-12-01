@@ -29,7 +29,7 @@ class ParamTrain:
     """Param for training model."""
     # range of nthist(number of time bins for history)
     n_split : int = 5
-    penalty_range = np.arange(.1, 1.2,.2)
+    penalty_range = np.arange(.001, .1, .005)
     scoring = "mean_square_error"
     train_size = .8
 
