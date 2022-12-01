@@ -74,10 +74,10 @@ class SpikesPastCoordDataset:
 
     def _load_data(self) -> Tuple[np.array, np.array]:
         """Load coordinates and spike data."""
-        coords_df = pd.read_excel(self.data_dir/'position.csv')
+        coords_df = pd.read_csv(self.data_dir/'position.csv')
         coords=coords_df.values[3:,1:3] # only take the X,Y axis data
 
-        spikes_df = pd.read_excel(self.data_dir/'traces.csv',index_col=0)
+        spikes_df = pd.read_csv(self.data_dir/'traces.csv',index_col=0)
         spikes = spikes_df.values
 
         # make sure spike and postion data have the same length
@@ -130,7 +130,7 @@ class PastCoordDataset:
         """
         n_time_bins, _ = self.spikes.shape
         if self.nthist !=0:
-            design_m = self.coord[:-self.nthist]
+            design_m = self.coord[:-self.nthist].reshape(-1,1)
         else:
             raise ValueError("nthist must be larger than 0.")
 
@@ -139,17 +139,17 @@ class PastCoordDataset:
 
     def load_all_data(self) -> Tuple[np.array, np.array]:
         """Load design matrix and corresponding response(coordinate)."""
-        coords_xy, self.spikes = self._load_data()
+        coords_xy, self.spikes = self._load_data
         self.coord = coords_xy[:,self.axis]
         return self.design_matrix, self.coord[self.nthist:]
 
     @cached_property
     def _load_data(self) -> Tuple[np.array, np.array]:
         """Load coordinates and spike data."""
-        coords_df = pd.read_excel(self.data_dir/'position.csv')
-        coords=coords_df.values[3:,1:3] # only take the X,Y axis data
+        coords_df = pd.read_csv(self.data_dir/'position.csv')
+        coords = coords_df.values[3:,1:3] # only take the X,Y axis data
 
-        spikes_df = pd.read_excel(self.data_dir/'traces.csv',index_col=0)
+        spikes_df = pd.read_csv(self.data_dir/'traces.csv',index_col=0)
         spikes = spikes_df.values
 
         # make sure spike and postion data have the same length
