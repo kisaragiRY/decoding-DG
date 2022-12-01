@@ -87,7 +87,6 @@ class SpikesPastCoordDataset:
 
         return coords,spikes
 
-
 @dataclass
 class PastCoordDataset:
     """Dataset that includes one mouse's spikes and coordinates.
@@ -159,7 +158,6 @@ class PastCoordDataset:
         spikes = spikes[:n_bins]
 
         return coords,spikes
-    
 
 
 
