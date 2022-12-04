@@ -12,7 +12,7 @@ def main():
     datalist = ParamDir().data_path_list
 
 
-    for data_dir in tqdm(datalist[[0,2]]):
+    for data_dir in tqdm(datalist):
         data_name = str(data_dir).split('/')[-1]
         dataset = PastCoordDataset(data_dir)
         with open(output_dir/(f"rr_only_past_coord_{data_name}.pickle"),"rb") as f:
