@@ -1,3 +1,6 @@
-from .dataset import PastCoordDataset
+from .dataset import PastCoordDataset, SpikesCoordDataset
 
-__all__ = ["PastCoordDataset"]
+__all__ = [
+    "PastCoordDataset", 
+    "SpikesCoordDataset"
+    ]
