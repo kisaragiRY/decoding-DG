@@ -14,7 +14,7 @@ def _is_valid_axis(coord_axis: str) -> bool:
     return False
 
 @dataclass
-class SpikesPastCoordDataset:
+class SpikesCoordDataset:
     """Dataset that includes one mouse's spikes and coordinates.
     
     This dataset is for regression model that incorporates past 
@@ -31,18 +31,12 @@ class SpikesPastCoordDataset:
     
     """
     data_dir : Path
-    coord_axis : str
-    nthist : int
 
     def __post_init__(self) -> None:
         """Post precessing."""
-        if not _is_valid_axis(self.coord_axis):
-            raise ValueError("The coord_axis can either be 'x-axis' or 'y-axis'.")
-        self.axis = 0 if self.coord_axis == "x-axis" else 1
-        self.data = self.load_all_data()
+        self.coords_xy, self.spikes = self._load_data()
 
-    @property
-    def design_matrix(self) -> np.array:
+    def design_matrix(self, nthist: int) -> np.array:
         """Make design matrix for decoder with past corrdinates.
 
         Parameter:
@@ -55,26 +49,28 @@ class SpikesPastCoordDataset:
             num of time bins for spikes history, default=1
         """
         n_time_bins, n_neurons = self.spikes.shape
-        design_m = np.zeros((n_time_bins - self.nthist, n_neurons+1))
-        if self.nthist !=0:
-            design_m[:,:-1] = self.spikes[self.nthist:]
-            design_m[:,-1] = self.coord[:-self.nthist]
+        if nthist !=0:
+            design_m = np.zeros((n_time_bins - nthist, n_neurons+1))
+            design_m[:,:-1] = self.spikes[nthist:]
+            design_m[:,-1] = self.coord[:-nthist]
         else:
             design_m = self.spikes
 
-        design_mat_all_offset = np.hstack((np.ones((n_time_bins-self.nthist,1)), design_m))
+        design_mat_all_offset = np.hstack((np.ones((n_time_bins-nthist,1)), design_m))
         return design_mat_all_offset
 
-    def load_all_data(self) -> Tuple[np.array, np.array]:
+    def load_all_data(self, coord_axis: str, nthist: int) -> Tuple[np.array, np.array]:
         """Load design matrix and corresponding response(coordinate)."""
-        coords_xy, self.spikes = self._load_data()
-        self.coord = coords_xy[:,self.axis]
-        return self.design_matrix, self.coord[self.nthist:]
+        self.axis = 0 if coord_axis == "x-axis" else 1
+        if not _is_valid_axis(coord_axis):
+            raise ValueError("The coord_axis can either be 'x-axis' or 'y-axis'.")
+        self.coord = self.coords_xy[:,self.axis]
+        return self.design_matrix(nthist), self.coord[nthist:]
 
     def _load_data(self) -> Tuple[np.array, np.array]:
         """Load coordinates and spike data."""
-        coords_df = pd.read_csv(self.data_dir/'position.csv')
-        coords=coords_df.values[3:,1:3] # only take the X,Y axis data
+        coords_df = pd.read_csv(self.data_dir/'position.csv',index_col=0)
+        coords = coords_df.values[3:,1:3] # only take the X,Y axis data
 
         spikes_df = pd.read_csv(self.data_dir/'traces.csv',index_col=0)
         spikes = spikes_df.values
@@ -84,7 +80,7 @@ class SpikesPastCoordDataset:
         coords = coords[:n_bins]
         spikes = spikes[:n_bins]
 
-        return coords,spikes
+        return coords, spikes
 
 @dataclass
 class PastCoordDataset:

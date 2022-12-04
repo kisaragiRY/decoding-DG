@@ -29,7 +29,7 @@ class RidgeSigTest:
         ESS = np.sum((self.model.y_train - np.average(self.model.y_train))**2)
 
         # degree of freedom of the model
-        self.C = inv(self.model.X_train.T @ self.model.X_train) + self.model.penalty * np.identity(p)
+        self.C = self.model.xxlam # (X'X + lambda*I)^-1
         H = self.model.X_train @ self.C @ self.model.X_train.T
         self.df_model = n - np.trace(2 * H - H @ H)
 
