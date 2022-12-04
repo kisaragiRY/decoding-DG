@@ -30,7 +30,7 @@ def main() -> None:
     output_dir = ParamDir().output_dir
 
     # get the regression results for all the mice
-    for data_dir in tqdm(datalist[[0,2]]):
+    for data_dir in tqdm(datalist):
         dataset = PastCoordDataset(data_dir)
         data_name = str(data_dir).split('/')[-1]
 
