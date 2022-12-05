@@ -11,7 +11,7 @@ RUN apt-get update
 
 # necessary packages
 RUN apt-get install -y \
-    wget curl git gcc make\
+    wget curl git gcc make vim\
     build-essential \
     libsm-dev \
     libxrender-dev \
@@ -57,3 +57,5 @@ RUN /usr/local/bin/python3.8 -m pip install --upgrade pip \
     && $POETRY_HOME/bin/poetry config virtualenvs.create false \
     && $POETRY_HOME/bin/poetry install --no-root
 
+# add user
+USER zhang-r
