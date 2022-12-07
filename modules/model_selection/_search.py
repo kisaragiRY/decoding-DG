@@ -69,9 +69,8 @@ class SearchCV:
         ----------
         train_scores: scores during cross-validation training.
         test_scores : scores during cross-validation testing.
-        fitted_param": fitted parameter from training.
-        hyper_param: hyper parameter(penalty in the case of ridge regression).
-        estimator: estimator
+        estimator: estimator instance.
+        sig_tests: significance tests results.
         """
         if self.out is None:
             raise ValueError("evaluate_candidates is not implemented.")
