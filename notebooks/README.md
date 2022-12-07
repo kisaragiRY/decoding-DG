@@ -1,4 +1,4 @@
-# Implementing and analysis
+# `notebooks/` Structure
 
 - 0-pre-analysis
 - 1-data-preparation
@@ -22,7 +22,10 @@
             - `02-parallel-computation.ipynb`
             - `03-matrix-multiplication.ipynb`
         - 1-implement-spikes-past-coord
-            - `01-check-spikes-coord.ipynb`
+            - `01-decoded-loc.ipynb`
+                - visualize representatives decoded loc compared to real loc in two-dim and one-dim.
+            - `02-overall-scores.ipynb`
+                - aggregate the decoding scores from different mice.
             - `train.py`
             - `param.py`
             - `eval.py`
