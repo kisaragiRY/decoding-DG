@@ -1,22 +1,35 @@
 # Implementing and analysis
 
-- 01-raw-data
-    - 01-implement-ridge-regression-raw-data.py
-        - implemented rr model with raw data
-        - coordinate~spike count
-    - 02-analysis-rr-raw-data.ipynb
-        - analysed the results
-
-- 02-summed-spikes
-    - 01-implement-rr-summed-spikes.py
-        - implemented rr model with summed spikes
-        - coordinate~summed spike count from history bins
-    - 02-analysis-rr-summed-spikes.ipynb
-        - analysed the results
-
-- 03-past-coordinates
-    - 01-implement-rr-past-coordinates.py
-        - implemented rr model with past coordinates
-        - coordinate~summed spike count+past coordinates
-    - 02-analysis-rr-past-coordinates.ipynb
-        - analysed the results
+- 0-pre-analysis
+- 1-data-preparation
+    - `01-excel-to-csv.ipynb`
+- 2-decoding-model
+    - 1-raw-data
+        - `01-implement-ridge-regression-raw-data.py`
+            - implemented rr model with raw data
+            - coordinate~spike count
+        - `02-analysis-rr-raw-data.ipynb`
+            - analysed the results
+    - 2-summed-spikes
+        - `01-implement-rr-summed-spikes.py`
+            - implemented rr model with summed spikes
+            - coordinate~summed spike count from history bins
+        - `02-analysis-rr-summed-spikes.ipynb`
+            - analysed the results
+    - 3-past-coordinates
+        - 0-measure-time-spent
+            - `01-load-data.ipynb`
+            - `02-parallel-computation.ipynb`
+            - `03-matrix-multiplication.ipynb`
+        - 1-implement-spikes-past-coord
+            - `01-check-spikes-coord.ipynb`
+            - `train.py`
+            - `param.py`
+            - `eval.py`
+        - 2-implement-only-past-coord
+            - `01-check-only-past-coord.ipynb`
+            - `train.py`
+            - `param.py`
+            - `eval.py`
+        - 3-model-comparison
+            - `01-F-test.ipynb`
