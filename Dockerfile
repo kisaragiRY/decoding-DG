@@ -7,9 +7,8 @@ ENV HOME=/home\
 RUN mkdir -p $WORKDIR
 WORKDIR $WORKDIR
 
-RUN apt-get update
-
 # necessary packages
+RUN apt-get update
 RUN apt-get install -y \
     wget curl git gcc make vim\
     build-essential \
@@ -36,7 +35,7 @@ RUN apt-get install -y \
     python3-tk \
     libbz2-dev
 
-# download python
+# download python 3.8.5
 RUN wget https://www.python.org/ftp/python/3.8.5/Python-3.8.5.tar.xz \
     && tar xJf Python-3.8.5.tar.xz \
     && cd Python-3.8.5 \
@@ -45,7 +44,6 @@ RUN wget https://www.python.org/ftp/python/3.8.5/Python-3.8.5.tar.xz \
     && cd ../ \
     && rm -rf Python*
 RUN echo 'export PYTHONPATH="$WORKDIR:$PYTHONPATH"' >> $HOME/.bashrc 
-
 
 # poetry
 COPY poetry.lock pyproject.toml ./
@@ -57,5 +55,3 @@ RUN /usr/local/bin/python3.8 -m pip install --upgrade pip \
     && $POETRY_HOME/bin/poetry config virtualenvs.create false \
     && $POETRY_HOME/bin/poetry install --no-root
 
-# add user
-USER zhang-r
