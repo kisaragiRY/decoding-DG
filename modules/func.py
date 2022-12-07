@@ -3,23 +3,25 @@ import pandas as pd
 import numpy as np
 from scipy.linalg import hankel
 from pathlib import Path
+
+from zmq import Errno
  
-def data_loader(data_dir):
+def load_data(data_dir):
     '''
-    load positiona and spike data
+    load coordinates and spike data
     '''
-    position_df=pd.read_excel(data_dir/'position.xlsx')
-    position=position_df.values[3:,1:3] # only take the X,Y axis data
+    coords_df=pd.read_excel(data_dir/'position.xlsx')
+    coords=coords_df.values[3:,1:3] # only take the X,Y axis data
 
     spikes_df=pd.read_excel(data_dir/'traces.xlsx',index_col=0)
     spikes=spikes_df.values
 
     # make sure spike and postion data have the same length
-    n_bins=min(len(position),len(spikes))
-    position = position[:n_bins]
+    n_bins=min(len(coords),len(spikes))
+    coords = coords[:n_bins]
     spikes = spikes[:n_bins]
 
-    return position,spikes
+    return coords,spikes
     
 def bin_pos(position,num_par=2,partition_type="grid"):
     '''
@@ -53,7 +55,7 @@ def bin_pos(position,num_par=2,partition_type="grid"):
     return binned_position
 
 
-def design_matrix_encoder(binned_position,spikes,ntfilt,nthist):
+def mk_design_matrix_encoder(binned_position,spikes,ntfilt,nthist):
     '''
     to construct design matrix for GLM encoder
 
@@ -79,13 +81,56 @@ def design_matrix_encoder(binned_position,spikes,ntfilt,nthist):
 
     return design_mat_all_offset
 
-def design_matrix_decoder(spikes):
-    '''
-    to construct design matrix for linear gaussian decoder
-    '''
-    num_time_bins,_ = spikes.shape
-    # add offset
-    design_mat_all_offset = np.hstack((np.ones((num_time_bins,1)), spikes))
+def mk_design_matrix_decoder1(spikes:np.array,nthist:int=0):
+    """Make design matrix with/without spike history for decoder.
+
+    Parameter:
+    ----------
+    spikes: np.array
+        that has neurons's spike counts data.
+    nthist: int
+        num of time bins for spike history,default=0
+    """
+    n_time_bins,n_neurons = spikes.shape
+    if nthist>1:
+        new_dm_len=n_time_bins-nthist+1 # length of the design matrix would reduce after intoducing nthist
+        design_mat_hist=np.zeros((new_dm_len,nthist,n_neurons))
+        for neuron in range(n_neurons):
+            design_mat_hist[:,:,neuron]=hankel(spikes[:-nthist+1,neuron],spikes[-nthist:,neuron]) 
+        design_mat_hist= design_mat_hist.reshape(new_dm_len,-1,order='F')
+        design_mat_all_offset = np.hstack((np.ones((new_dm_len,1)), design_mat_hist))
+    elif nthist==0:
+        design_mat_all_offset = np.hstack((np.ones((n_time_bins,1)), spikes))
+    else:
+        raise ValueError("Invalid Value: nthis shoudl be larger than 1 or equal to 0")
+    return design_mat_all_offset
+
+def mk_design_matrix_decoder2(spikes:np.array,nthist:int=0):
+    """Make design matrix for decoder with summed spikes from history bins.
+
+    eg. nthist=2
+    ---       ---
+    |0|       |0|
+    ---       ---
+    |1|       |1|
+    ---  ---> ---
+    |0|       |1|   <---current bin + history = 0 + (0+1) = 1
+    ---       ---     
+    |1|       |2|   <---current bin + history = 1 + (1+0) = 2
+
+    Parameter:
+    ----------
+    spikes: np.array
+        that has neurons's spikes count data.
+    nthist: int
+        num of time bins for spikes history, default=0
+    """
+    n_time_bins, n_neurons = spikes.shape
+    new_spikes = np.zeros((n_time_bins - nthist,n_neurons))
+    for i in range(nthist,n_time_bins):
+        new_spikes[i-nthist] = spikes[i-nthist:i].sum(axis=0) 
+
+    design_mat_all_offset = np.hstack((np.ones((n_time_bins-nthist,1)), new_spikes))
     return design_mat_all_offset
 
 
@@ -106,10 +151,3 @@ def cal_mae(prediction,observation):
         tmp=[np.abs(i-j)for i,j in zip(prediction,observation)]
     return np.sum(tmp)/len(prediction)
 
-
-if __name__=="__main__":
-    data_dir=Path('data/alldata/')
-    datalist=os.listdir(data_dir)
-    data_name=data_dir/datalist[0]
-    position,spike=data_loader(data_name)
-    print(bin_pos(position))
