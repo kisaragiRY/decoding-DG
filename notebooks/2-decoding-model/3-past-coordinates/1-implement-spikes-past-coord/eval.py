@@ -24,7 +24,7 @@ def main():
             (_, _), (X_test, y_test) = spilt_data(design_matrix, coord, ParamTrain().train_size)
 
             rr = RidgeRegression()
-            rr.load(result["fitted_param"])
+            rr.load(result["estimator"].fitted_param)
             test_scores, y_pred = rr.evaluate(X_test, y_test, ParamEval().scoring)
             eval_results = {
                 "eval_test_scores" : test_scores,
