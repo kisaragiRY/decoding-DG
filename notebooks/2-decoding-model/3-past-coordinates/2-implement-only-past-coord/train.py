@@ -35,7 +35,7 @@ def main() -> None:
         data_name = str(data_dir).split('/')[-1]
 
         results_all=[]
-        for nthist, coord_axis in tqdm(product(ParamData().nthist_range, coord_axis_opts)):
+        for nthist, coord_axis in product(ParamData().nthist_range, coord_axis_opts):
             design_matrix, coord = dataset.load_all_data(coord_axis, nthist) # load coordinates and spikes data
 
             (X_train, y_train), (X_test, y_test) = spilt_data(design_matrix, coord, .8)
@@ -46,20 +46,15 @@ def main() -> None:
             rr.fit(X_train, y_train, 0)
             rr.predict(X_test)
             result = {
-                "train_scores": scorer(y_train, np.einsum("ij,j->i",X_train, rr.fitted_param)),
+                "train_scores": scorer(y_train, X_train@rr.fitted_param),
                 "test_scores" : scorer(y_test, rr.prediction),
-                "fitted_param": rr.fitted_param,
-                "hyper_param": 0,
+                "estimator": rr
                 }
 
             # significance results
             sig_tests = RidgeSigTest(rr)
             more_results ={
-                "RSS": sig_tests.RSS,
-                "F_stat": sig_tests.f_stat,
-                "F_p_value": sig_tests.f_p_value,
-                "coeff_stats": sig_tests.t_stat_list,
-                "coeff_p_values": sig_tests.t_p_value_list,
+                "sig_tests": sig_tests,
                 "nthist": nthist, 
                 "coord_axis": coord_axis
             }

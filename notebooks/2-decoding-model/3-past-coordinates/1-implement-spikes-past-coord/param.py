@@ -15,7 +15,7 @@ class ParamDir:
 @dataclass
 class ParamData:
     """Param for setting up dataset."""
-    nthist_range = range(6)
+    nthist_range = range(30)
 
 @dataclass
 class ParamTrain:

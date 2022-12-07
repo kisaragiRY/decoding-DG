@@ -22,7 +22,7 @@ class ParamDir:
 @dataclass
 class ParamData:
     """Param for setting up dataset."""
-    nthist_range = np.arange(1,6)
+    nthist_range = np.arange(1,30)
 
 @dataclass
 class ParamTrain:
