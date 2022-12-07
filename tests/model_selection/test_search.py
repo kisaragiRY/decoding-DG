@@ -46,13 +46,13 @@ def test_fit_and_score(train_set, train_index, test_index, hyper_param):
 
     assert (train_scores == result["train_scores"]).all()
     assert (test_scores == result["test_scores"]).all()
-    assert (rr.fitted_param == result["fitted_param"]).all()
+    assert (rr.fitted_param == result["estimator"].fitted_param).all()
 
 @pytest.mark.parametrize("coord_axis, nthist", 
                         [["x-axis", 1],])
 def test_search(data_dir, coord_axis, nthist):
     """Test evaluate_candidates."""
-    X, y = PastCoordDataset(data_dir, coord_axis, nthist).data
+    X, y = PastCoordDataset(data_dir).load_all_data(coord_axis, nthist)
     search = SearchCV(ParamTrain().scoring, ParamTrain().penalty_range, 10)
     search.evaluate_candidates(X[:1000], y[:1000])
-    assert any(search.best_result["coeff_p_values"])
+    assert any(search.best_result["sig_tests"].t_p_value_list)

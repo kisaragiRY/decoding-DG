@@ -34,13 +34,9 @@ class SearchCV:
         estimator.predict(X_test)
         y_pred = estimator.prediction
 
-        sig_tests = RidgeSigTest(estimator)
-
         result = {
             "train_scores": self.scorer(y_train, np.einsum("ij,j->i",X_train, fitted_param)),
             "test_scores" : self.scorer(y_test, y_pred),
-            "fitted_param": fitted_param,
-            "hyper_param": hyper_param,
             "estimator" : estimator
         }
         return result
@@ -58,7 +54,7 @@ class SearchCV:
                     param
                 ) 
                 for param, (train_indexes, test_indexes) in 
-                tqdm(product(self.candidate_params, self.cv.split(X))))
+                product(self.candidate_params, self.cv.split(X)))
 
     def _aggregate_result(self):
         """Aggregate results to a dict."""
@@ -67,7 +63,16 @@ class SearchCV:
     
     @property
     def best_result(self):
-        """Get the best result with lowest test_scores"""
+        """Get the best result with lowest test_scores
+        
+        Return
+        ----------
+        train_scores: scores during cross-validation training.
+        test_scores : scores during cross-validation testing.
+        fitted_param": fitted parameter from training.
+        hyper_param: hyper parameter(penalty in the case of ridge regression).
+        estimator: estimator
+        """
         if self.out is None:
             raise ValueError("evaluate_candidates is not implemented.")
         else:
@@ -77,11 +82,7 @@ class SearchCV:
 
             sig_tests = RidgeSigTest(best_result["estimator"])
             more_results ={
-                "RSS": sig_tests.RSS,
-                "F_stat": sig_tests.f_stat,
-                "F_p_value": sig_tests.f_p_value,
-                "coeff_stats": sig_tests.t_stat_list,
-                "coeff_p_values": sig_tests.t_p_value_list,
+                "sig_tests": sig_tests,
             }
             best_result.update(more_results)
 
