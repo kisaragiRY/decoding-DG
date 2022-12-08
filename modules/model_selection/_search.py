@@ -5,8 +5,8 @@ import numpy as np
 from tqdm import tqdm
 from joblib import Parallel, delayed
 
-from modules.metrics import get_scorer
-from modules.decoder import RidgeRegression
+from metrics import get_scorer
+from decoder import RidgeRegression
 from ._split import RollingOriginSplit
 from ._sigtest import RidgeSigTest
 

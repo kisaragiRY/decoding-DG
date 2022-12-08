@@ -1,13 +1,12 @@
-from modules.func import *
-from modules.decoder import RidgeRegression
+from func import *
 from tqdm import tqdm
 import pickle
 from itertools import product
 from typing import Tuple
 
 from param import *
-from modules.dataloader import SpikesCoordDataset
-from modules.model_selection import SearchCV
+from dataloader import SpikesCoordDataset
+from model_selection import SearchCV
 
 def spilt_data(X: np.array, y: np.array, train_ratio: float) -> Tuple[Tuple[np.array,np.array],Tuple[np.array,np.array]]:
     """Get training and testing data."""

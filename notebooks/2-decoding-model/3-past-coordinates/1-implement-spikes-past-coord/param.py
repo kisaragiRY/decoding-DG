@@ -6,8 +6,8 @@ import numpy as np
 class ParamDir:
     """Param for directory."""
     ROOT : Path = Path("/work")
-    DATA_DIR : Path = Path('data/alldata/')
-    OUTPUT_DIR : Path = Path("output/ridge_regression/")
+    DATA_DIR : Path = ROOT/Path('data/alldata/')
+    OUTPUT_DIR : Path = ROOT/Path("output/ridge_regression/")
 
     def __post_init__(self) -> None:
         self.data_path_list = np.array([x for x in self.DATA_DIR.iterdir()])

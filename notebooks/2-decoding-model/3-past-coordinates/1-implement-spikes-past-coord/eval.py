@@ -1,7 +1,7 @@
 from train import spilt_data
 from param import *
-from modules.dataloader import SpikesCoordDataset
-from modules.decoder import RidgeRegression
+from dataloader import SpikesCoordDataset
+from decoder import RidgeRegression
 
 import pickle
 from tqdm import tqdm

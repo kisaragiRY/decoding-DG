@@ -3,8 +3,8 @@ from scipy.linalg import inv
 from scipy import stats
 from typing import Tuple
 
-from .func import *
-from .metrics import get_scorer
+from func import *
+from metrics import get_scorer
 
 class RidgeRegression():
     '''A linear guassian ridge model.
