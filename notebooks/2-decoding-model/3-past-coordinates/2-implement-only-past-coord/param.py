@@ -6,8 +6,8 @@ import numpy as np
 class ParamDir:
     """Param for directory."""
     ROOT : Path = Path("/work")
-    DATA_ROOT : Path = Path('data/alldata/')
-    OUTPUT_ROOT : Path = Path("output/")
+    DATA_ROOT : Path = ROOT/Path('data/alldata/')
+    OUTPUT_ROOT : Path = ROOT/Path("output/")
 
     def __post_init__(self) -> None:
         if not self.OUTPUT_ROOT.exists():
