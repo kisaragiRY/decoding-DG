@@ -1,6 +1,7 @@
-from .dataset import PastCoordDataset, SpikesCoordDataset
+from .dataset import *
 
 __all__ = [
     "PastCoordDataset", 
-    "SpikesCoordDataset"
+    "SpikesCoordDataset",
+    "SmoothedSpikesDataset"
     ]
