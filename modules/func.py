@@ -3,25 +3,6 @@ import pandas as pd
 import numpy as np
 from scipy.linalg import hankel
 from pathlib import Path
-
-from zmq import Errno
- 
-def load_data(data_dir):
-    '''
-    load coordinates and spike data
-    '''
-    coords_df=pd.read_excel(data_dir/'position.xlsx')
-    coords=coords_df.values[3:,1:3] # only take the X,Y axis data
-
-    spikes_df=pd.read_excel(data_dir/'traces.xlsx',index_col=0)
-    spikes=spikes_df.values
-
-    # make sure spike and postion data have the same length
-    n_bins=min(len(coords),len(spikes))
-    coords = coords[:n_bins]
-    spikes = spikes[:n_bins]
-
-    return coords,spikes
     
 def bin_pos(position,num_par=2,partition_type="grid"):
     '''
@@ -133,21 +114,24 @@ def mk_design_matrix_decoder2(spikes:np.array,nthist:int=0):
     design_mat_all_offset = np.hstack((np.ones((n_time_bins-nthist,1)), new_spikes))
     return design_mat_all_offset
 
+def mk_design_matrix_decoder3(spikes:np.array, coordinates: np.array, nthist:int=1) -> np.array:
+    """Make design matrix for decoder with past corrdinates.
 
-def cal_mse(prediction,observation):
-    '''
-    calculate the MSE based on prediction,observation
-    '''
-    tmp=[(i-j)**2 for i,j in zip(prediction,observation)]
-    return np.sum(tmp)/len(prediction)
+    Parameter:
+    ----------
+    spikes: np.array
+        that has neurons's spikes count data.
+    coordinates: np.array
+        x or y coordinate data
+    nthist: int
+        num of time bins for spikes history, default=1
+    """
+    n_time_bins, n_neurons = spikes.shape
+    design_m = np.zeros((n_time_bins - nthist,n_neurons+1))
+    for i in range(n_time_bins - nthist):
+        design_m[i,:-1] = spikes[i + nthist] # current spike
+        design_m[i,-1] = coordinates[i] # past coordinates
 
-def cal_mae(prediction,observation):
-    '''
-    calculate the MAE based on prediction,observation
-    '''
-    if (prediction).all()==np.nan:
-        tmp=np.nan
-    else:
-        tmp=[np.abs(i-j)for i,j in zip(prediction,observation)]
-    return np.sum(tmp)/len(prediction)
+    design_mat_all_offset = np.hstack((np.ones((n_time_bins-nthist,1)), design_m))
+    return design_mat_all_offset
 
