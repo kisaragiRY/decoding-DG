@@ -18,11 +18,11 @@ def _is_valid_axis(coord_axis: str) -> bool:
     return False
 
 def _is_valid_mode(mode: str) -> bool:
-    """Check whether the mode is valid.
+    """Check whether the mode is valid for SummedSpikesDataset.
     
-    The mode can either be "summed-past", "summed-current", "gaussian".
+    The mode can either be "summed-past", "summed-current".
     """
-    if mode in ["summed-past", "summed-current", "gaussian"]:
+    if mode in ["summed-past", "summed-current"]:
         return True
     return False
 
@@ -149,6 +149,78 @@ class SmoothedSpikesDataset:
     """Dataset that includes one mouse's spikes and coordinates.
     
     This dataset is for regression model that incorporates past 
+    coordinates and gassian kernel smoothed spikes.
+
+    Parameters
+    ---------
+    datadir : Path
+        the path to a mouse's data
+    """
+    data_dir : Path
+
+    def __post_init__(self) -> None:
+        """Post precessing."""
+        self.coords_xy, self.spikes = self._load_data()
+    
+    def _load_data(self) -> Tuple[NDArray, NDArray]:
+        """Load coordinates and spike data."""
+        coords_df = pd.read_csv(self.data_dir/'position.csv',index_col=0)
+        coords = coords_df.values[3:,1:3] # only take the X,Y axis data
+
+        spikes_df = pd.read_csv(self.data_dir/'traces.csv',index_col=0)
+        spikes = spikes_df.values
+
+        # make sure spike and postion data have the same length
+        n_bins = min(len(coords),len(spikes))
+        coords = coords[:n_bins]
+        spikes = spikes[:n_bins]
+
+        return coords, spikes
+    
+    def filter_spikes(self, window_size: int, design_spikes: NDArray) -> NDArray:
+        """Filter spikes with the given kernel."""
+        kernel = gauss(np.linspace(-3, 3, window_size))
+
+        def filtered(x: NDArray) -> NDArray:
+            """Convovle with the given kernel."""
+            return np.convolve(x, kernel, mode="same")
+
+        return np.apply_along_axis(filtered, 0, design_spikes)
+
+    def load_all_data(self, coord_axis : str, nthist : int, window_size : int) -> Tuple[NDArray, NDArray]:
+        """Load design matrix and corresponding response(coordinate).
+        
+        Parameter
+        ------------
+        coord_axis : str
+            Specify which axis to use. 
+            The coord_axis can either be 'x-axis' or 'y-axis'.
+        nthist: int
+            Which history bin to use ahead of current bin.
+        """
+        if not _is_valid_axis(coord_axis):
+            raise ValueError("Invalid axis name. The coord_axis can either be 'x-axis' or 'y-axis'.")
+
+        self.axis = 0 if coord_axis == "x-axis" else 1
+        self.coord = self.coords_xy[:, self.axis]
+
+        n_time_bins, n_neurons = self.spikes.shape
+        if nthist != 0:
+            design_m = np.zeros((n_time_bins - nthist, n_neurons+1))
+            design_m[:,:-1] = self.filter_spikes(window_size, self.spikes[nthist:]) 
+            design_m[:,-1] = self.coord[:-nthist]
+        else:
+            design_m = self.filter_spikes(window_size, self.spikes) 
+
+        design_mat_all_offset = np.hstack((np.ones((len(design_m),1)), design_m))
+
+        return design_mat_all_offset, self.coord[nthist:]
+
+@dataclass
+class SummedSpikesDataset:
+    """Dataset that includes one mouse's spikes and coordinates.
+    
+    This dataset is for regression model that incorporates past 
     coordinates and history or future spikes.
 
     Parameters
@@ -177,12 +249,9 @@ class SmoothedSpikesDataset:
 
         return coords, spikes
     
-    def filter_spikes(self, mode: str, window_size: int, design_spikes: NDArray) -> NDArray:
+    def filter_spikes(self, window_size: int, design_spikes: NDArray) -> NDArray:
         """Filter spikes with the given kernel."""
-        if mode == "gaussian":
-            kernel = gauss(np.linspace(-3, 3, window_size))
-        else:
-            kernel = np.ones(window_size)
+        kernel = np.ones(window_size)
 
         def filtered(x: NDArray) -> NDArray:
             """Convovle with the given kernel."""
@@ -204,7 +273,6 @@ class SmoothedSpikesDataset:
             In which way to incorparate the history spikes data depending on the window size.
             "summed-past" : sum up the past spikes, date back from the current bin.
             "summed-current" : sum up the spikes centered by the current bin.
-            "gaussian" : a gaussian kernel.
         """
         if not _is_valid_axis(coord_axis):
             raise ValueError("Invalid axis name. The coord_axis can either be 'x-axis' or 'y-axis'.")
@@ -218,7 +286,7 @@ class SmoothedSpikesDataset:
         n_time_bins, n_neurons = self.spikes.shape
         if nthist != 0:
             design_m = np.zeros((n_time_bins - nthist, n_neurons+1))
-            design_m[:,:-1] = self.filter_spikes(mode, window_size, self.spikes[nthist:]) 
+            design_m[:,:-1] = self.filter_spikes(window_size, self.spikes[nthist:]) 
             design_m[:,-1] = self.coord[:-nthist]
             if mode == "summed-past":
                 design_m_spikes = design_m[:,:-1][:-(window_size//2)]
@@ -226,7 +294,7 @@ class SmoothedSpikesDataset:
                 design_m = np.hstack((design_m_spikes, design_m_coord.reshape(-1,1)))
                 self.coord = self.coord[window_size//2:]
         else:
-            design_m = self.filter_spikes(mode, window_size, self.spikes) 
+            design_m = self.filter_spikes(window_size, self.spikes) 
             if mode == "summed-past":
                 design_m = design_m[:-(window_size//2)]
                 self.coord = self.coord[window_size//2:]
