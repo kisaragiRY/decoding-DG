@@ -103,7 +103,7 @@ def test_SummedSpikesDataset(data_dir, coord_axis, nthist, mode, window_size):
 
         return np.apply_along_axis(filtered, 0, design_spikes)
 
-    design_matrix, coord = SummedSpikesDataset(data_dir).load_all_data(coord_axis, nthist, mode, window_size)
+    design_matrix, coord = SummedSpikesDataset(data_dir, mode).load_all_data(coord_axis, nthist, window_size)
 
     coords_df = pd.read_csv(data_dir/'position.csv', index_col=0)
     ori_coord = coords_df.values[3:,1:3][:,0] if coord_axis == "x-axis" else coords_df.values[3:,1:3][:,1]# only take the X,Y axis data
