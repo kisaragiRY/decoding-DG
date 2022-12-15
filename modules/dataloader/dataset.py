@@ -281,14 +281,14 @@ class SummedSpikesDataset:
             design_m = np.zeros((n_time_bins - nthist, n_neurons+1))
             design_m[:,:-1] = self.filter_spikes(window_size, self.spikes[nthist:]) 
             design_m[:,-1] = self.coord[:-nthist]
-            if self.mode == "summed-past":
+            if self.mode == "summed-past" and window_size!=1:
                 design_m_spikes = design_m[:,:-1][:-(window_size//2)]
                 design_m_coord = design_m[:,-1][window_size//2:]
                 design_m = np.hstack((design_m_spikes, design_m_coord.reshape(-1,1)))
                 self.coord = self.coord[window_size//2:]
         else:
             design_m = self.filter_spikes(window_size, self.spikes) 
-            if self.mode == "summed-past":
+            if self.mode == "summed-past" and window_size!=1:
                 design_m = design_m[:-(window_size//2)]
                 self.coord = self.coord[window_size//2:]
 
