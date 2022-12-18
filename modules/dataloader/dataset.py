@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from util import gauss
+from util import gauss1d
 
 def _is_valid_axis(coord_axis: str) -> bool:
     """Check whether the axis is valid.
@@ -170,7 +170,7 @@ class SmoothedSpikesDataset:
     
     def filter_spikes(self, window_size: int, design_spikes: NDArray) -> NDArray:
         """Filter spikes with the given kernel."""
-        kernel = gauss(np.linspace(-3, 3, window_size))
+        kernel = gauss1d(np.linspace(-3, 3, window_size))
 
         def filtered(x: NDArray) -> NDArray:
             """Convovle with the given kernel."""
