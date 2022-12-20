@@ -18,6 +18,31 @@ def _is_valid_axis(coord_axis: str) -> bool:
     return False
 
 @dataclass
+class BaseDataset:
+    """Base dataset that loads spikes and coordinates data.
+    """
+    data_dir : Path
+
+    def __post_init__(self) -> None:
+        """Post precessing."""
+        self.coords_xy, self.spikes = self._load_data()
+        
+    def _load_data(self) -> Tuple[NDArray, NDArray]:
+        """Load coordinates and spike data."""
+        coords_df = pd.read_csv(self.data_dir/'position.csv',index_col=0)
+        coords = coords_df.values[3:,1:3] # only take the X,Y axis data
+
+        spikes_df = pd.read_csv(self.data_dir/'traces.csv',index_col=0)
+        spikes = spikes_df.values
+
+        # make sure spike and postion data have the same length
+        n_bins = min(len(coords),len(spikes))
+        coords = coords[:n_bins]
+        spikes = spikes[:n_bins]
+
+        return coords, spikes
+
+@dataclass
 class SpikesCoordDataset:
     """Dataset that includes one mouse's spikes and coordinates.
     
