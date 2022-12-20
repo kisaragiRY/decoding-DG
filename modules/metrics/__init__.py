@@ -1,9 +1,7 @@
-from ._regression import mean_square_error
-
 from ._scorer import get_scorer
+from ._infomation import InfoMetrics
 
 __all__ = [
-    "mean_square_error",
-
+    "InfoMetrics",
     "get_scorer"
 ]
