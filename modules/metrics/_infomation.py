@@ -9,12 +9,12 @@ class InfoMetrics:
 
     Parameter:
     ---------
-    spikes: NDArray
+    spikes : NDArray
         neuorns spike count data
 
-    status:NDArray
-        can be discretized position from continuous coordinates to discrete value 1,2,3...
-        or discretized direction, discretized speed
+    status : NDArray
+        discretized behaviors with values like 1,2,3...
+        it can be discretized position, direction or speed.
     """
     spikes: NDArray
     status: NDArray
@@ -26,7 +26,7 @@ class InfoMetrics:
     def concat_data(self, nueron_id: int):
         """Concatenate status and spikes and return a dataframe
         """
-        self.status_spikes=pd.DataFrame(np.hstack((self.status,self.spikes[:,nueron_id].reshape(-1,1))))
+        self.status_spikes = pd.DataFrame(np.hstack((self.status, self.spikes[:, nueron_id].reshape(-1, 1))))
 
     def mutual_info(self, nueron_id: int) -> float:
         """Calculate the mutual information between spikes and binned position.
