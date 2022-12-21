@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from util import gauss
+from util import gauss1d
 from modules.dataloader import *
 
 @pytest.fixture
@@ -55,7 +55,7 @@ def test_SmoothedSpikesDataset(data_dir, coord_axis, nthist, window_size):
     """Test SmoothedSpikesDataset."""
     def filter_spikes(window_size: int, design_spikes: NDArray) -> NDArray:
         """Filter spikes with the given kernel."""
-        kernel = gauss(np.linspace(-3, 3, window_size))
+        kernel = gauss1d(np.linspace(-3, 3, window_size))
 
         def filtered(x: NDArray) -> NDArray:
             """Convovle with the given kernel."""

@@ -107,7 +107,7 @@ class SpikesCoordDataset:
         return coords, spikes
 
 @dataclass
-class PastCoordDataset:
+class PastCoordDataset(BaseDataset):
     """Dataset that includes one mouse's spikes and coordinates.
     
     This dataset is for regression model that incorporates past 
@@ -118,11 +118,6 @@ class PastCoordDataset:
     datadir : Path
         the path to a mouse's data
     """
-    data_dir : Path
-
-    def __post_init__(self) -> None:
-        """Post precessing."""
-        self.coords_xy = self._load_data()
 
     def design_matrix(self, nthist: int) -> NDArray:
         """Make design matrix for decoder with past corrdinates.
@@ -153,15 +148,8 @@ class PastCoordDataset:
         self.coord = self.coords_xy[:, self.axis]
         return self.design_matrix(nthist), self.coord[nthist:]
 
-    def _load_data(self) -> Tuple[NDArray, NDArray]:
-        """Load coordinates and spike data."""
-        coords_df = pd.read_csv(self.data_dir/'position.csv', index_col=0)
-        coords = coords_df.values[3:,1:3] # only take the X,Y axis data
-
-        return coords
-
 @dataclass
-class SmoothedSpikesDataset:
+class SmoothedSpikesDataset(BaseDataset):
     """Dataset that includes one mouse's spikes and coordinates.
     
     This dataset is for regression model that incorporates past 
@@ -171,28 +159,7 @@ class SmoothedSpikesDataset:
     ---------
     datadir : Path
         the path to a mouse's data
-    """
-    data_dir : Path
-
-    def __post_init__(self) -> None:
-        """Post precessing."""
-        self.coords_xy, self.spikes = self._load_data()
-    
-    def _load_data(self) -> Tuple[NDArray, NDArray]:
-        """Load coordinates and spike data."""
-        coords_df = pd.read_csv(self.data_dir/'position.csv',index_col=0)
-        coords = coords_df.values[3:,1:3] # only take the X,Y axis data
-
-        spikes_df = pd.read_csv(self.data_dir/'traces.csv',index_col=0)
-        spikes = spikes_df.values
-
-        # make sure spike and postion data have the same length
-        n_bins = min(len(coords),len(spikes))
-        coords = coords[:n_bins]
-        spikes = spikes[:n_bins]
-
-        return coords, spikes
-    
+    """  
     def filter_spikes(self, window_size: int, design_spikes: NDArray) -> NDArray:
         """Filter spikes with the given kernel."""
         kernel = gauss1d(np.linspace(-3, 3, window_size))
@@ -233,7 +200,7 @@ class SmoothedSpikesDataset:
         return design_mat_all_offset, self.coord[nthist:]
 
 @dataclass
-class SummedSpikesDataset:
+class SummedSpikesDataset(BaseDataset):
     """Dataset that includes one mouse's spikes and coordinates.
     
     This dataset is for regression model that incorporates past 
@@ -241,38 +208,18 @@ class SummedSpikesDataset:
 
     Parameters
     ---------
-    datadir : Path
-        the path to a mouse's data
     mode : str
         In which way to incorparate the history spikes data depending on the window size.
         "summed-past" : sum up the past spikes, date back from the current bin.
         "summed-current" : sum up the spikes centered by the current bin.
     """
-    data_dir : Path
     mode : str
 
     def __post_init__(self) -> None:
         """Post precessing."""
         if self.mode not in ["summed-past", "summed-current"]:
             raise ValueError("Invalid mode name. The coord_mode can either be 'summed-past' or 'summed-current'.")
-
         self.coords_xy, self.spikes = self._load_data()
-        
-    
-    def _load_data(self) -> Tuple[NDArray, NDArray]:
-        """Load coordinates and spike data."""
-        coords_df = pd.read_csv(self.data_dir/'position.csv',index_col=0)
-        coords = coords_df.values[3:,1:3] # only take the X,Y axis data
-
-        spikes_df = pd.read_csv(self.data_dir/'traces.csv',index_col=0)
-        spikes = spikes_df.values
-
-        # make sure spike and postion data have the same length
-        n_bins = min(len(coords),len(spikes))
-        coords = coords[:n_bins]
-        spikes = spikes[:n_bins]
-
-        return coords, spikes
     
     def filter_spikes(self, window_size: int, design_spikes: NDArray) -> NDArray:
         """Filter spikes with the given kernel."""
