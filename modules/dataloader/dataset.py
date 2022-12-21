@@ -20,13 +20,27 @@ def _is_valid_axis(coord_axis: str) -> bool:
 @dataclass
 class BaseDataset:
     """Base dataset that loads spikes and coordinates data.
+
+    Parameters
+    ---------
+    datadir : Path
+        the path to a mouse's data
+    shuffle_method : Union[bool, str]
+        whether to shuffle the data, and if does, specify the method.
+        the value can be either False, 'behavior shuffling' or 'events shuffling'.
     """
     data_dir : Path
+    shuffle_method : Union[bool, str]
 
     def __post_init__(self) -> None:
         """Post precessing."""
         self.coords_xy, self.spikes = self._load_data()
-        
+        if self.shuffle_method:
+            if self.shuffle_method not in ['behavior shuffling', 'events shuffling']:
+                raise ValueError("Please specify a valid shuffle method. It can either be 'behavior shuffling' or 'events shuffling'.")
+            else:
+                self._shuffle()
+
     def _load_data(self) -> Tuple[NDArray, NDArray]:
         """Load coordinates and spike data."""
         coords_df = pd.read_csv(self.data_dir/'position.csv',index_col=0)
@@ -41,25 +55,36 @@ class BaseDataset:
         spikes = spikes[:n_bins]
 
         return coords, spikes
+    
+    def _shuffle(self) -> None:
+        """Shuffle the data.
+        
+        Based on two methods:'behavior shuffling' and 'events shuffling'.
+        Details see method in reference: https://pubmed.ncbi.nlm.nih.gov/32521223/
+        """
+        if self.shuffle_method == 'behavior shuffling':
+            # --- 1. flip in time
+            self.shuffled_coords_xy = self.coords_xy[::-1]
+            # --- 2. shift a random amount
+            np.random.seed(20221221)
+            random_num = np.random.random(1, len(self.coords_xy))
+            self.shuffled_coords_xy = np.roll(self.coords_xy, random_num)
+        else:
+            shuffle_spikes = self.spikes
+            np.random.seed(20221221)
+            for row in enumerate(shuffle_spikes):
+                # shuffle the row when there are spikes
+                if np.sum(row) > 0:
+                    np.random.shuffle(row)
+    
 
 @dataclass
-class SpikesCoordDataset:
+class SpikesCoordDataset(BaseDataset):
     """Dataset that includes one mouse's spikes and coordinates.
     
     This dataset is for regression model that incorporates past 
     coordinates as one of the features in design matrix.
-
-    Parameters
-    ---------
-    datadir : Path
-        the path to a mouse's data
     """
-    data_dir : Path
-
-    def __post_init__(self) -> None:
-        """Post precessing."""
-        self.coords_xy, self.spikes = self._load_data()
-
     def design_matrix(self, nthist: int) -> NDArray:
         """Make design matrix for decoder with past corrdinates.
 
@@ -91,21 +116,6 @@ class SpikesCoordDataset:
         self.coord = self.coords_xy[:,self.axis]
         return self.design_matrix(nthist), self.coord[nthist:]
 
-    def _load_data(self) -> Tuple[NDArray, NDArray]:
-        """Load coordinates and spike data."""
-        coords_df = pd.read_csv(self.data_dir/'position.csv',index_col=0)
-        coords = coords_df.values[3:,1:3] # only take the X,Y axis data
-
-        spikes_df = pd.read_csv(self.data_dir/'traces.csv',index_col=0)
-        spikes = spikes_df.values
-
-        # make sure spike and postion data have the same length
-        n_bins = min(len(coords),len(spikes))
-        coords = coords[:n_bins]
-        spikes = spikes[:n_bins]
-
-        return coords, spikes
-
 @dataclass
 class PastCoordDataset(BaseDataset):
     """Dataset that includes one mouse's spikes and coordinates.
@@ -113,10 +123,6 @@ class PastCoordDataset(BaseDataset):
     This dataset is for regression model that incorporates past 
     coordinates as one of the features in design matrix.
 
-    Parameters
-    ---------
-    datadir : Path
-        the path to a mouse's data
     """
 
     def design_matrix(self, nthist: int) -> NDArray:
@@ -154,11 +160,6 @@ class SmoothedSpikesDataset(BaseDataset):
     
     This dataset is for regression model that incorporates past 
     coordinates and gassian kernel smoothed spikes.
-
-    Parameters
-    ---------
-    datadir : Path
-        the path to a mouse's data
     """  
     def filter_spikes(self, window_size: int, design_spikes: NDArray) -> NDArray:
         """Filter spikes with the given kernel."""
