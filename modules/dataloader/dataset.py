@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from util import gauss
+from util import gauss1d
 
 def _is_valid_axis(coord_axis: str) -> bool:
     """Check whether the axis is valid.
@@ -18,23 +18,71 @@ def _is_valid_axis(coord_axis: str) -> bool:
     return False
 
 @dataclass
-class SpikesCoordDataset:
-    """Dataset that includes one mouse's spikes and coordinates.
-    
-    This dataset is for regression model that incorporates past 
-    coordinates as one of the features in design matrix.
+class BaseDataset:
+    """Base dataset that loads spikes and coordinates data.
 
     Parameters
     ---------
     datadir : Path
         the path to a mouse's data
+    shuffle_method : Union[bool, str]
+        whether to shuffle the data, and if does, specify the method.
+        the value can be either False, 'behavior shuffling' or 'events shuffling'.
     """
     data_dir : Path
+    shuffle_method : Union[bool, str]
 
     def __post_init__(self) -> None:
         """Post precessing."""
         self.coords_xy, self.spikes = self._load_data()
+        if self.shuffle_method:
+            if self.shuffle_method not in ['behavior shuffling', 'events shuffling']:
+                raise ValueError("Please specify a valid shuffle method. It can either be 'behavior shuffling' or 'events shuffling'.")
+            else:
+                self._shuffle()
 
+    def _load_data(self) -> Tuple[NDArray, NDArray]:
+        """Load coordinates and spike data."""
+        coords_df = pd.read_csv(self.data_dir/'position.csv',index_col=0)
+        coords = coords_df.values[3:,1:3] # only take the X,Y axis data
+
+        spikes_df = pd.read_csv(self.data_dir/'traces.csv',index_col=0)
+        spikes = spikes_df.values
+
+        # make sure spike and postion data have the same length
+        n_bins = min(len(coords),len(spikes))
+        coords = coords[:n_bins]
+        spikes = spikes[:n_bins]
+
+        return coords, spikes
+    
+    def _shuffle(self) -> None:
+        """Shuffle the data.
+        
+        Based on two methods:'behavior shuffling' and 'events shuffling'.
+        Details see method in reference: https://pubmed.ncbi.nlm.nih.gov/32521223/
+        """
+        if self.shuffle_method == 'behavior shuffling':
+            # --- 1. flip in time
+            self.shuffled_coords_xy = self.coords_xy[::-1]
+            # --- 2. shift a random amount
+            random_num = np.random.randint(1, len(self.coords_xy))
+            self.shuffled_coords_xy = np.roll(self.coords_xy, random_num)
+        else:
+            self.shuffle_spikes = self.spikes
+            for row in self.shuffle_spikes:
+                # shuffle the row when there are spikes
+                if np.sum(row) > 0:
+                    np.random.shuffle(row)
+    
+
+@dataclass
+class SpikesCoordDataset(BaseDataset):
+    """Dataset that includes one mouse's spikes and coordinates.
+    
+    This dataset is for regression model that incorporates past 
+    coordinates as one of the features in design matrix.
+    """
     def design_matrix(self, nthist: int) -> NDArray:
         """Make design matrix for decoder with past corrdinates.
 
@@ -66,38 +114,14 @@ class SpikesCoordDataset:
         self.coord = self.coords_xy[:,self.axis]
         return self.design_matrix(nthist), self.coord[nthist:]
 
-    def _load_data(self) -> Tuple[NDArray, NDArray]:
-        """Load coordinates and spike data."""
-        coords_df = pd.read_csv(self.data_dir/'position.csv',index_col=0)
-        coords = coords_df.values[3:,1:3] # only take the X,Y axis data
-
-        spikes_df = pd.read_csv(self.data_dir/'traces.csv',index_col=0)
-        spikes = spikes_df.values
-
-        # make sure spike and postion data have the same length
-        n_bins = min(len(coords),len(spikes))
-        coords = coords[:n_bins]
-        spikes = spikes[:n_bins]
-
-        return coords, spikes
-
 @dataclass
-class PastCoordDataset:
+class PastCoordDataset(BaseDataset):
     """Dataset that includes one mouse's spikes and coordinates.
     
     This dataset is for regression model that incorporates past 
     coordinates as one of the features in design matrix.
 
-    Parameters
-    ---------
-    datadir : Path
-        the path to a mouse's data
     """
-    data_dir : Path
-
-    def __post_init__(self) -> None:
-        """Post precessing."""
-        self.coords_xy = self._load_data()
 
     def design_matrix(self, nthist: int) -> NDArray:
         """Make design matrix for decoder with past corrdinates.
@@ -128,49 +152,16 @@ class PastCoordDataset:
         self.coord = self.coords_xy[:, self.axis]
         return self.design_matrix(nthist), self.coord[nthist:]
 
-    def _load_data(self) -> Tuple[NDArray, NDArray]:
-        """Load coordinates and spike data."""
-        coords_df = pd.read_csv(self.data_dir/'position.csv', index_col=0)
-        coords = coords_df.values[3:,1:3] # only take the X,Y axis data
-
-        return coords
-
 @dataclass
-class SmoothedSpikesDataset:
+class SmoothedSpikesDataset(BaseDataset):
     """Dataset that includes one mouse's spikes and coordinates.
     
     This dataset is for regression model that incorporates past 
     coordinates and gassian kernel smoothed spikes.
-
-    Parameters
-    ---------
-    datadir : Path
-        the path to a mouse's data
-    """
-    data_dir : Path
-
-    def __post_init__(self) -> None:
-        """Post precessing."""
-        self.coords_xy, self.spikes = self._load_data()
-    
-    def _load_data(self) -> Tuple[NDArray, NDArray]:
-        """Load coordinates and spike data."""
-        coords_df = pd.read_csv(self.data_dir/'position.csv',index_col=0)
-        coords = coords_df.values[3:,1:3] # only take the X,Y axis data
-
-        spikes_df = pd.read_csv(self.data_dir/'traces.csv',index_col=0)
-        spikes = spikes_df.values
-
-        # make sure spike and postion data have the same length
-        n_bins = min(len(coords),len(spikes))
-        coords = coords[:n_bins]
-        spikes = spikes[:n_bins]
-
-        return coords, spikes
-    
+    """  
     def filter_spikes(self, window_size: int, design_spikes: NDArray) -> NDArray:
         """Filter spikes with the given kernel."""
-        kernel = gauss(np.linspace(-3, 3, window_size))
+        kernel = gauss1d(np.linspace(-3, 3, window_size))
 
         def filtered(x: NDArray) -> NDArray:
             """Convovle with the given kernel."""
@@ -208,7 +199,7 @@ class SmoothedSpikesDataset:
         return design_mat_all_offset, self.coord[nthist:]
 
 @dataclass
-class SummedSpikesDataset:
+class SummedSpikesDataset(BaseDataset):
     """Dataset that includes one mouse's spikes and coordinates.
     
     This dataset is for regression model that incorporates past 
@@ -216,38 +207,18 @@ class SummedSpikesDataset:
 
     Parameters
     ---------
-    datadir : Path
-        the path to a mouse's data
     mode : str
         In which way to incorparate the history spikes data depending on the window size.
         "summed-past" : sum up the past spikes, date back from the current bin.
         "summed-current" : sum up the spikes centered by the current bin.
     """
-    data_dir : Path
     mode : str
 
     def __post_init__(self) -> None:
         """Post precessing."""
         if self.mode not in ["summed-past", "summed-current"]:
             raise ValueError("Invalid mode name. The coord_mode can either be 'summed-past' or 'summed-current'.")
-
         self.coords_xy, self.spikes = self._load_data()
-        
-    
-    def _load_data(self) -> Tuple[NDArray, NDArray]:
-        """Load coordinates and spike data."""
-        coords_df = pd.read_csv(self.data_dir/'position.csv',index_col=0)
-        coords = coords_df.values[3:,1:3] # only take the X,Y axis data
-
-        spikes_df = pd.read_csv(self.data_dir/'traces.csv',index_col=0)
-        spikes = spikes_df.values
-
-        # make sure spike and postion data have the same length
-        n_bins = min(len(coords),len(spikes))
-        coords = coords[:n_bins]
-        spikes = spikes[:n_bins]
-
-        return coords, spikes
     
     def filter_spikes(self, window_size: int, design_spikes: NDArray) -> NDArray:
         """Filter spikes with the given kernel."""
