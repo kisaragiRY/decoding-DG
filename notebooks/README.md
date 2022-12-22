@@ -7,6 +7,9 @@
     - 1-detect-place-cells
         - `01-spike-triggered-average.ipynb`
         - `02-spatial-tuning-map.ipynb`
+        - `03-cal-MI.ipynb`
+        - `04-detect-place-cells.ipynb`
+        - `param.py`
 - 3-decoding-model
     - 1-raw-data
         - `01-implement-ridge-regression-raw-data.py`
