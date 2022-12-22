@@ -19,3 +19,8 @@ class ParamDir:
             self.output_dir.mkdir()
 
         self.data_list = np.array([x for x in self.DATA_ROOT.iterdir()])
+
+@dataclass
+class ParamShuffle:
+    """Parameters for shuffling."""
+    num_repeat : int = 500

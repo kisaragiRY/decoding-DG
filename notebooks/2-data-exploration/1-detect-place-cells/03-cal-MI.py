@@ -6,14 +6,14 @@ from dataloader import BaseDataset
 from param import *
 from util import bin_pos
 
-def cal_MI():
+def cal_all_MI(data_dir: Path):
     """Calculate MI.
 
     based on original data and shuffled data.
     """
-    for data_dir in tqdm(ParamDir().data_list):
-        data_name = str(data_dir).split('/')[-1]
-
+    data_name = str(data_dir).split('/')[-1]
+    original_MI, beh_shuffled_MI_all, event_shuffled_MI_all = [], [], []
+    for i in tqdm(range(ParamShuffle().num_repeat)):
         beh_dataset = BaseDataset(data_dir, 'behavior shuffling')
         event_dataset = BaseDataset(data_dir, 'events shuffling')
 
@@ -26,22 +26,26 @@ def cal_MI():
         beh_shuffled_info = InfoMetrics(beh_dataset.spikes, shuffled_position)
         event_shuffled_info = InfoMetrics(shuffled_spikes, binned_position)
 
-        original_MI, beh_shuffled_MI, event_shuffled_MI = [], [], []
+        beh_shuffled_MI, event_shuffled_MI = [], []
         for n_id in range(beh_dataset.spikes.shape[1]):
-            original_MI.append(info.mutual_info(n_id)) # orignal MI
+            if i == 0:
+                original_MI.append(info.mutual_info(n_id)) # orignal MI
             beh_shuffled_MI.append(beh_shuffled_info.mutual_info(n_id)) # behavior shuffled MI
             event_shuffled_MI.append(event_shuffled_info.mutual_info(n_id)) # event shuffled MI
+        beh_shuffled_MI_all.append(beh_shuffled_MI)
+        event_shuffled_MI_all.append(event_shuffled_MI)
         
-        result_MI = {
-            "original MI": original_MI,
-            "behavior shuffled MI": beh_shuffled_MI,
-            'event shuffled MI': event_shuffled_MI
-        }
-        if not (ParamDir().output_dir/data_name).exists():
-            (ParamDir().output_dir/data_name).mkdir()
-        with open(ParamDir().output_dir/data_name/"MI_all.pickle", "wb") as f:
-            pickle.dump(result_MI, f)
+    result_MI = {
+        "original MI": original_MI,
+        "behavior shuffled MI all": beh_shuffled_MI_all,
+        'event shuffled MI all': event_shuffled_MI_all
+    }
+    if not (ParamDir().output_dir/data_name).exists():
+        (ParamDir().output_dir/data_name).mkdir()
+    with open(ParamDir().output_dir/data_name/"MI_all.pickle", "wb") as f:
+        pickle.dump(result_MI, f)
 
 
 if __name__ == "__main__":
-    cal_MI()
+    for data_dir in tqdm(ParamDir().data_list):
+        cal_all_MI(data_dir)
