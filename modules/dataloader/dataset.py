@@ -66,12 +66,10 @@ class BaseDataset:
             # --- 1. flip in time
             self.shuffled_coords_xy = self.coords_xy[::-1]
             # --- 2. shift a random amount
-            np.random.seed(20221221)
             random_num = np.random.randint(1, len(self.coords_xy))
             self.shuffled_coords_xy = np.roll(self.coords_xy, random_num)
         else:
             self.shuffle_spikes = self.spikes
-            np.random.seed(20221221)
             for row in self.shuffle_spikes:
                 # shuffle the row when there are spikes
                 if np.sum(row) > 0:
