@@ -1,12 +1,17 @@
-import numpy as np
 from numpy.typing import NDArray
+from typing import Tuple
+
+import numpy as np
 from numpy.linalg import det, inv
 
 
 def gauss1d(xx: NDArray, mu: float = 0, sigma: float = .2):
     """A Gaussian kernel."""
     kernel = 1 / ((2 * np.pi) ** 2 * sigma) * np.exp(- (xx - mu) ** 2 / (2 * sigma ** 2))
-    return kernel / sum(kernel)
+    if sum(kernel) == 0: # if xx is array of zeros then return itself
+        return xx
+    else: 
+        return kernel / sum(kernel)
 
 def gauss2d(xx: NDArray, mu: float = 0, sigma: float = 3):
     """A 2 dimension Gaussian kernel."""
@@ -102,3 +107,30 @@ def cal_sta(dataset, num_par: int, neuron_id: int) -> NDArray:
     sta = np.array(sta).reshape(num_par,-1)
     
     return sta
+
+def estimate_firing_rate(spikes: NDArray, window_size: int, sigma: float = .2) -> NDArray:
+    """Smooth the spikes with a gaussian kernel.
+    
+    Parameter
+    ------------
+    window_size: int
+        the size of the gaussian kernel
+    sigma: float
+        the sigma of the gaussian kernel
+    spikes: NDArray
+        the spikes count data. 
+    """
+    kernel = gauss1d(np.linspace(-3, 3, window_size), sigma= sigma)
+
+    def filtered(x: NDArray) -> NDArray:
+        """Convovle with the given kernel."""
+        return np.convolve(x, kernel, mode="same")
+
+    return np.apply_along_axis(filtered, 0, spikes)
+
+def spilt_data(X: np.array, y: np.array, train_ratio: float) -> Tuple[Tuple[np.array,np.array],Tuple[np.array,np.array]]:
+    """Get training and testing data."""
+    train_size = int( len(X) * train_ratio )
+    X_train,y_train = X[:train_size], y[:train_size]
+    X_test,y_test = X[train_size:], y[train_size:]
+    return (X_train, y_train), (X_test, y_test)

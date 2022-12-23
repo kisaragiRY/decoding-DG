@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from util import gauss1d
+from util import estimate_firing_rate
 
 def _is_valid_axis(coord_axis: str) -> bool:
     """Check whether the axis is valid.
@@ -157,19 +157,9 @@ class SmoothedSpikesDataset(BaseDataset):
     """Dataset that includes one mouse's spikes and coordinates.
     
     This dataset is for regression model that incorporates past 
-    coordinates and gassian kernel smoothed spikes.
+    coordinates(optional) and gassian kernel smoothed spikes.
     """  
-    def filter_spikes(self, window_size: int, design_spikes: NDArray) -> NDArray:
-        """Filter spikes with the given kernel."""
-        kernel = gauss1d(np.linspace(-3, 3, window_size))
-
-        def filtered(x: NDArray) -> NDArray:
-            """Convovle with the given kernel."""
-            return np.convolve(x, kernel, mode="same")
-
-        return np.apply_along_axis(filtered, 0, design_spikes)
-
-    def load_all_data(self, coord_axis : str, nthist : int, window_size : int) -> Tuple[NDArray, NDArray]:
+    def load_all_data(self, coord_axis : str, nthist : int, window_size : int, sigma:float = .2) -> Tuple[NDArray, NDArray]:
         """Load design matrix and corresponding response(coordinate).
         
         Parameter
@@ -186,13 +176,11 @@ class SmoothedSpikesDataset(BaseDataset):
         self.axis = 0 if coord_axis == "x-axis" else 1
         self.coord = self.coords_xy[:, self.axis]
 
-        n_time_bins, n_neurons = self.spikes.shape
         if nthist != 0:
-            design_m = np.zeros((n_time_bins - nthist, n_neurons+1))
-            design_m[:,:-1] = self.filter_spikes(window_size, self.spikes[nthist:]) 
+            design_m[:,:-1] = estimate_firing_rate(window_size, self.spikes[nthist:], sigma)
             design_m[:,-1] = self.coord[:-nthist]
         else:
-            design_m = self.filter_spikes(window_size, self.spikes) 
+            design_m = estimate_firing_rate(self.spikes, window_size, sigma) 
 
         design_mat_all_offset = np.hstack((np.ones((len(design_m),1)), design_m))
 
