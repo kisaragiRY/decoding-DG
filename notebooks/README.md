@@ -1,9 +1,16 @@
 # `notebooks/` Structure
 
-- 0-pre-analysis
 - 1-data-preparation
     - `01-excel-to-csv.ipynb`
-- 2-decoding-model
+- 2-data-exploration
+    > explanatory analysis 
+    - 1-detect-place-cells
+        - `01-spike-triggered-average.ipynb`
+        - `02-spatial-tuning-map.ipynb`
+        - `03-cal-MI.ipynb`
+        - `04-detect-place-cells.ipynb`
+        - `param.py`
+- 3-decoding-model
     - 1-raw-data
         - `01-implement-ridge-regression-raw-data.py`
             - implemented rr model with raw data
