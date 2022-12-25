@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from util import gauss1d
+from util import gauss1d, cal_velocity
 
 def _is_valid_axis(coord_axis: str) -> bool:
     """Check whether the axis is valid.
@@ -25,16 +25,25 @@ class BaseDataset:
     ---------
     datadir : Path
         the path to a mouse's data
+    mobility : Union[bool, float]
+        whethe to only use the data when the mouse is moving.
+        if given, must specify the threshold for identifying immobility.
     shuffle_method : Union[bool, str]
         whether to shuffle the data, and if does, specify the method.
         the value can be either False, 'behavior shuffling' or 'events shuffling'.
     """
     data_dir : Path
+    mobility : Union[bool, float]
     shuffle_method : Union[bool, str]
 
     def __post_init__(self) -> None:
         """Post precessing."""
         self.coords_xy, self.spikes = self._load_data()
+        if self.mobility:
+            vel = cal_velocity(self.coords_xy)
+            self.coords_xy = self.coords_xy[vel > self.mobility]
+            self.spikes = self.spikes[vel > self.mobility]
+
         if self.shuffle_method:
             if self.shuffle_method not in ['behavior shuffling', 'events shuffling']:
                 raise ValueError("Please specify a valid shuffle method. It can either be 'behavior shuffling' or 'events shuffling'.")
