@@ -1,5 +1,7 @@
-import numpy as np
+from typing import Tuple
 from numpy.typing import NDArray
+
+import numpy as np
 from numpy.linalg import det, inv
 
 
@@ -102,3 +104,42 @@ def cal_sta(dataset, num_par: int, neuron_id: int) -> NDArray:
     sta = np.array(sta).reshape(num_par,-1)
     
     return sta
+
+def get_3sigma(results_all: list, neuron_id: int) -> Tuple:
+    """Get the 3 sigma from the shuffled MI.
+    
+    Return
+    ----------
+    behavior_3sigma : float
+        3sigma for behavior shuffled MI.
+    event_3sigma : float
+        3sigma for event shuffled MI.
+    """
+    beh_std_3 = np.array(results_all['behavior shuffled MI all'])[:,neuron_id].std()*3
+    event_std_3 = np.array(results_all['event shuffled MI all'])[:,neuron_id].std()*3
+
+    beh_mu = np.array(results_all['behavior shuffled MI all'])[:,neuron_id].mean()
+    event_mu = np.array(results_all['event shuffled MI all'])[:,neuron_id].mean()
+
+    behavior_3sigma = beh_mu + beh_std_3
+    event_3sigma = event_mu + event_std_3
+    return behavior_3sigma, event_3sigma
+
+def get_pc_ratio(results_all:list) -> Tuple:
+    """Get place cells ratio based on two shuffle methods.
+
+    Return
+    ----------
+    pc_beh_id : list
+        place cell ratio from behavior shuffling method.
+    pc_event_id : list
+        place cell ratio from event shuffling method.
+    """
+    pc_beh_id, pc_event_id = [], []
+    for neuron_id in range(len(results_all['original MI'])):
+        behavior_3sigma, event_3sigma = get_3sigma(results_all, neuron_id)
+        if results_all['original MI'][neuron_id] > behavior_3sigma:
+            pc_beh_id.append(neuron_id)
+        if results_all['original MI'][neuron_id] > event_3sigma:
+            pc_event_id.append(neuron_id)
+    return (pc_beh_id, pc_event_id)
