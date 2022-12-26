@@ -21,6 +21,10 @@ class ParamDir:
         self.data_list = np.array([x for x in self.DATA_ROOT.iterdir()])
 
 @dataclass
+class ParamData:
+    mobility : float = 1.0
+
+@dataclass
 class ParamShuffle:
     """Parameters for shuffling."""
-    num_repeat : int = 500
+    num_repeat : int = 1000
