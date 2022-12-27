@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from util import estimate_firing_rate
+from util import gauss1d, cal_velocity
 
 def _is_valid_axis(coord_axis: str) -> bool:
     """Check whether the axis is valid.
@@ -25,16 +25,25 @@ class BaseDataset:
     ---------
     datadir : Path
         the path to a mouse's data
+    mobility : Union[bool, float]
+        whethe to only use the data when the mouse is moving.
+        if given, must specify the threshold for identifying immobility.
     shuffle_method : Union[bool, str]
         whether to shuffle the data, and if does, specify the method.
         the value can be either False, 'behavior shuffling' or 'events shuffling'.
     """
     data_dir : Path
+    mobility : Union[bool, float]
     shuffle_method : Union[bool, str]
 
     def __post_init__(self) -> None:
         """Post precessing."""
         self.coords_xy, self.spikes = self._load_data()
+        if self.mobility:
+            vel = cal_velocity(self.coords_xy)
+            self.coords_xy = self.coords_xy[vel > self.mobility]
+            self.spikes = self.spikes[vel > self.mobility]
+
         if self.shuffle_method:
             if self.shuffle_method not in ['behavior shuffling', 'events shuffling']:
                 raise ValueError("Please specify a valid shuffle method. It can either be 'behavior shuffling' or 'events shuffling'.")
@@ -157,9 +166,19 @@ class SmoothedSpikesDataset(BaseDataset):
     """Dataset that includes one mouse's spikes and coordinates.
     
     This dataset is for regression model that incorporates past 
-    coordinates(optional) and gassian kernel smoothed spikes.
+    coordinates and gassian kernel smoothed spikes.
     """  
-    def load_all_data(self, coord_axis : str, nthist : int, window_size : int, sigma:float = .2) -> Tuple[NDArray, NDArray]:
+    def filter_spikes(self, window_size: int, design_spikes: NDArray) -> NDArray:
+        """Filter spikes with the given kernel."""
+        kernel = gauss1d(np.linspace(-3, 3, window_size))
+
+        def filtered(x: NDArray) -> NDArray:
+            """Convovle with the given kernel."""
+            return np.convolve(x, kernel, mode="same")
+
+        return np.apply_along_axis(filtered, 0, design_spikes)
+
+    def load_all_data(self, coord_axis : str, nthist : int, window_size : int) -> Tuple[NDArray, NDArray]:
         """Load design matrix and corresponding response(coordinate).
         
         Parameter
@@ -176,11 +195,13 @@ class SmoothedSpikesDataset(BaseDataset):
         self.axis = 0 if coord_axis == "x-axis" else 1
         self.coord = self.coords_xy[:, self.axis]
 
+        n_time_bins, n_neurons = self.spikes.shape
         if nthist != 0:
-            design_m[:,:-1] = estimate_firing_rate(window_size, self.spikes[nthist:], sigma)
+            design_m = np.zeros((n_time_bins - nthist, n_neurons+1))
+            design_m[:,:-1] = self.filter_spikes(window_size, self.spikes[nthist:]) 
             design_m[:,-1] = self.coord[:-nthist]
         else:
-            design_m = estimate_firing_rate(self.spikes, window_size, sigma) 
+            design_m = self.filter_spikes(window_size, self.spikes) 
 
         design_mat_all_offset = np.hstack((np.ones((len(design_m),1)), design_m))
 

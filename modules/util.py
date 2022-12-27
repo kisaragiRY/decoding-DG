@@ -1,5 +1,5 @@
-from numpy.typing import NDArray
 from typing import Tuple
+from numpy.typing import NDArray
 
 import numpy as np
 from numpy.linalg import det, inv
@@ -8,10 +8,7 @@ from numpy.linalg import det, inv
 def gauss1d(xx: NDArray, mu: float = 0, sigma: float = .2):
     """A Gaussian kernel."""
     kernel = 1 / ((2 * np.pi) ** 2 * sigma) * np.exp(- (xx - mu) ** 2 / (2 * sigma ** 2))
-    if sum(kernel) == 0: # if xx is array of zeros then return itself
-        return xx
-    else: 
-        return kernel / sum(kernel)
+    return kernel / sum(kernel)
 
 def gauss2d(xx: NDArray, mu: float = 0, sigma: float = 3):
     """A 2 dimension Gaussian kernel."""
@@ -108,29 +105,41 @@ def cal_sta(dataset, num_par: int, neuron_id: int) -> NDArray:
     
     return sta
 
-def estimate_firing_rate(spikes: NDArray, window_size: int, sigma: float = .2) -> NDArray:
-    """Smooth the spikes with a gaussian kernel.
+def get_3sigma(results_all: list, neuron_id: int) -> Tuple:
+    """Get the 3 sigma from the shuffled MI.
     
-    Parameter
-    ------------
-    window_size: int
-        the size of the gaussian kernel
-    sigma: float
-        the sigma of the gaussian kernel
-    spikes: NDArray
-        the spikes count data. 
+    Return
+    ----------
+    behavior_3sigma : float
+        3sigma for behavior shuffled MI.
+    event_3sigma : float
+        3sigma for event shuffled MI.
     """
-    kernel = gauss1d(np.linspace(-3, 3, window_size), sigma= sigma)
+    beh_std_3 = np.array(results_all['behavior shuffled MI all'])[:,neuron_id].std()*3
+    event_std_3 = np.array(results_all['event shuffled MI all'])[:,neuron_id].std()*3
 
-    def filtered(x: NDArray) -> NDArray:
-        """Convovle with the given kernel."""
-        return np.convolve(x, kernel, mode="same")
+    beh_mu = np.array(results_all['behavior shuffled MI all'])[:,neuron_id].mean()
+    event_mu = np.array(results_all['event shuffled MI all'])[:,neuron_id].mean()
 
-    return np.apply_along_axis(filtered, 0, spikes)
+    behavior_3sigma = beh_mu + beh_std_3
+    event_3sigma = event_mu + event_std_3
+    return behavior_3sigma, event_3sigma
 
-def spilt_data(X: np.array, y: np.array, train_ratio: float) -> Tuple[Tuple[np.array,np.array],Tuple[np.array,np.array]]:
-    """Get training and testing data."""
-    train_size = int( len(X) * train_ratio )
-    X_train,y_train = X[:train_size], y[:train_size]
-    X_test,y_test = X[train_size:], y[train_size:]
-    return (X_train, y_train), (X_test, y_test)
+def get_pc_ratio(results_all:list) -> Tuple:
+    """Get place cells ratio based on two shuffle methods.
+
+    Return
+    ----------
+    pc_beh_id : list
+        place cell ratio from behavior shuffling method.
+    pc_event_id : list
+        place cell ratio from event shuffling method.
+    """
+    pc_beh_id, pc_event_id = [], []
+    for neuron_id in range(len(results_all['original MI'])):
+        behavior_3sigma, event_3sigma = get_3sigma(results_all, neuron_id)
+        if results_all['original MI'][neuron_id] > behavior_3sigma:
+            pc_beh_id.append(neuron_id)
+        if results_all['original MI'][neuron_id] > event_3sigma:
+            pc_event_id.append(neuron_id)
+    return (pc_beh_id, pc_event_id)
