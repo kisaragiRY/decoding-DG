@@ -18,21 +18,17 @@ def main() -> None:
         dataset = SmoothedSpikesDataset(data_dir, False)
 
         results_all=[]
-        for coord_axis, window_size, sigma in product( ParamFiringRateData().coord_axis_opts, ParamFiringRateData().window_size_range, ParamFiringRateData().sigma_range):
-            design_matrix, coord = dataset.load_all_data(
+        for coord_axis, window_size in product( ParamFiringRateData().coord_axis_opts, ParamFiringRateData().window_size_range):
+            (X_train, y_train), (X_test, y_test) = dataset.load_all_data(
                 coord_axis, 
-                ParamFiringRateData().nthist, 
                 window_size,
-                sigma
+                ParamTrain().train_size
                 ) # load coordinates and firing rate data
-
-            (X_train, y_train), (_, _) = spilt_data(design_matrix, coord, ParamTrain().train_size)
 
             search = SearchCV(ParamTrain().scoring, ParamTrain().penalty_range, ParamTrain().n_split)
             search.evaluate_candidates(X_train, y_train)
 
             train_results = {
-                "sigma": sigma,
                 "coord_axis": coord_axis,
                 "window_size": window_size
             }
