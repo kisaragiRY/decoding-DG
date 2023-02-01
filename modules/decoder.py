@@ -46,11 +46,13 @@ class RidgeRegression():
 
         Parameter:
         ---------
-        design_matrix_test: np.array
-            test design matrix including one column full of 1 for the intercept
+        X_test: np.array
+            including one column full of 1 for the intercept
 
         '''
-        self.prediction =  X_test @ self.fitted_param
+        if self.fitted_param is None:
+            raise ValueError("the model is not fitted, please call fit() first.")
+        return X_test @ self.fitted_param
 
     def load(self, fitted_param: np.array) -> None:
         self.fitted_param = fitted_param
