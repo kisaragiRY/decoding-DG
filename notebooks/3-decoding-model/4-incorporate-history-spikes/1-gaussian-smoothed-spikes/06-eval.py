@@ -1,28 +1,24 @@
 from dataloader import SmoothedSpikesDataset
 from decoder import RidgeRegression
 
-from util import spilt_data
 from param import *
 import pickle
 from tqdm import tqdm
 
 def main():
 
-    for data_dir in tqdm(ParamDir().data_path_list[[0]]):
+    for data_dir in tqdm(ParamDir().data_path_list):
         data_name = str(data_dir).split('/')[-1]
-        dataset = SmoothedSpikesDataset(data_dir, False)
+        
         with open(ParamDir().output_dir/data_name/(f"rr_firing_rate.pickle"),"rb") as f:
             results_all = pickle.load(f)
 
         eval_results_all = []
         for result in tqdm(results_all):
-            design_matrix, coord = dataset.load_all_data(
-                result["coord_axis"], 
-                ParamFiringRateData().nthist, 
+            dataset = SmoothedSpikesDataset(data_dir, result["coord_axis"], False, False)
+            (_, _), (X_test, y_test) = dataset.load_all_data(
                 result["window_size"], 
-                result["sigma"])  # load coordinates and spikes data
-
-            (_, _), (X_test, y_test) = spilt_data(design_matrix, coord, ParamTrain().train_size)
+                ParamTrain().train_size)  # load coordinates and spikes data
 
             rr = RidgeRegression()
             rr.load(result["estimator"].fitted_param)
