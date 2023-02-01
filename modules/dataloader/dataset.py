@@ -33,16 +33,25 @@ class BaseDataset:
         the value can be either False, 'behavior shuffling' or 'events shuffling'.
     """
     data_dir : Path
+    coord_axis : str
     mobility : Union[bool, float]
     shuffle_method : Union[bool, str]
 
     def __post_init__(self) -> None:
         """Post precessing."""
         self.coords_xy, self.spikes = self._load_data()
+
         if self.mobility:
             vel = cal_velocity(self.coords_xy)
             self.coords_xy = self.coords_xy[vel > self.mobility]
             self.spikes = self.spikes[vel > self.mobility]
+        
+        if not _is_valid_axis(self.coord_axis):
+            raise ValueError("Invalid axis name. The coord_axis can either be 'x-axis' or 'y-axis'.")
+
+        self.axis = 0 if self.coord_axis == "x-axis" else 1
+        self.y = self.coords_xy[:, self.axis]
+        self.X = self.spikes
 
         if self.shuffle_method:
             if self.shuffle_method not in ['behavior shuffling', 'events shuffling']:
@@ -73,16 +82,23 @@ class BaseDataset:
         """
         if self.shuffle_method == 'behavior shuffling':
             # --- 1. flip in time
-            self.shuffled_coords_xy = self.coords_xy[::-1]
+            self.y = self.y[::-1]
             # --- 2. shift a random amount
             random_num = np.random.randint(1, len(self.coords_xy))
-            self.shuffled_coords_xy = np.roll(self.coords_xy, random_num)
+            self.y = np.roll(self.y, random_num)
         else:
-            self.shuffle_spikes = self.spikes
-            for row in self.shuffle_spikes:
+            for row in self.X:
                 # shuffle the row when there are spikes
                 if np.sum(row) > 0:
                     np.random.shuffle(row)
+    
+    def split_data(self, X: NDArray, y: NDArray, train_ratio: float) -> Tuple:
+        """Split the data into train set and test set.
+        """
+        train_size = int( len(X) * train_ratio )
+        X_train, y_train = X[:train_size], y[:train_size]
+        X_test, y_test = X[train_size:], y[train_size:]
+        return (X_train, y_train), (X_test, y_test)
     
 
 @dataclass
@@ -168,7 +184,7 @@ class SmoothedSpikesDataset(BaseDataset):
     This dataset is for regression model that incorporates past 
     coordinates and gassian kernel smoothed spikes.
     """  
-    def filter_spikes(self, window_size: int, design_spikes: NDArray) -> NDArray:
+    def _filter_spikes(self, window_size: int, X: NDArray) -> NDArray:
         """Filter spikes with the given kernel."""
         kernel = gauss1d(np.linspace(-3, 3, window_size))
 
@@ -176,9 +192,9 @@ class SmoothedSpikesDataset(BaseDataset):
             """Convovle with the given kernel."""
             return np.convolve(x, kernel, mode="same")
 
-        return np.apply_along_axis(filtered, 0, design_spikes)
+        return np.apply_along_axis(filtered, 0, X)
 
-    def load_all_data(self, coord_axis : str, nthist : int, window_size : int) -> Tuple[NDArray, NDArray]:
+    def load_all_data(self, window_size : int, train_ratio: float) -> Tuple[NDArray, NDArray]:
         """Load design matrix and corresponding response(coordinate).
         
         Parameter
@@ -189,23 +205,19 @@ class SmoothedSpikesDataset(BaseDataset):
         nthist: int
             Which history bin to use ahead of current bin.
         """
-        if not _is_valid_axis(coord_axis):
-            raise ValueError("Invalid axis name. The coord_axis can either be 'x-axis' or 'y-axis'.")
 
-        self.axis = 0 if coord_axis == "x-axis" else 1
-        self.coord = self.coords_xy[:, self.axis]
+        # --- split data
+        (self.X_train, self.y_train), (self.X_test, self.y_test) = self.split_data(self.X, self.y, train_ratio)
 
-        n_time_bins, n_neurons = self.spikes.shape
-        if nthist != 0:
-            design_m = np.zeros((n_time_bins - nthist, n_neurons+1))
-            design_m[:,:-1] = self.filter_spikes(window_size, self.spikes[nthist:]) 
-            design_m[:,-1] = self.coord[:-nthist]
-        else:
-            design_m = self.filter_spikes(window_size, self.spikes) 
+        # --- smooth data
+        self.X_train = self._filter_spikes(window_size, self.X_train) 
+        self.X_test = self._filter_spikes(window_size, self.X_test)
 
-        design_mat_all_offset = np.hstack((np.ones((len(design_m),1)), design_m))
+        # --- add offset(intercept)
+        self.X_train = np.hstack((np.ones((len(self.X_train),1)), self.X_train))
+        self.X_test = np.hstack((np.ones((len(self.X_test),1)), self.X_test))
 
-        return design_mat_all_offset, self.coord[nthist:]
+        return (self.X_train, self.y_train), (self.X_test, self.y_test)
 
 @dataclass
 class SummedSpikesDataset(BaseDataset):
