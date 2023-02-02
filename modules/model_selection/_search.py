@@ -31,8 +31,8 @@ class SearchCV:
         estimator.fit(X_train,y_train, hyper_param)
         fitted_param = estimator.fitted_param
 
-        estimator.predict(X_test)
-        y_pred = estimator.prediction
+        
+        y_pred = estimator.predict(X_test)
 
         result = {
             "train_scores": self.scorer(y_train, np.einsum("ij,j->i",X_train, fitted_param)),
