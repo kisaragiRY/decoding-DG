@@ -40,6 +40,21 @@ class BaseDataset:
     def __post_init__(self) -> None:
         """Post precessing."""
         self.coords_xy, self.spikes = self._load_data()
+        if self.mobility:
+            vel = cal_velocity(self.coords_xy)
+            self.coords_xy = self.coords_xy[vel > self.mobility]
+            self.spikes = self.spikes[vel > self.mobility]
+
+        if self.shuffle_method:
+            if self.shuffle_method not in ['behavior shuffling', 'events shuffling']:
+                raise ValueError("Please specify a valid shuffle method. It can either be 'behavior shuffling' or 'events shuffling'.")
+            else:
+                self._shuffle()
+
+    def _load_data(self) -> Tuple[NDArray, NDArray]:
+        """Load coordinates and spike data."""
+        coords_df = pd.read_csv(self.data_dir/'position.csv',index_col=0)
+        coords = coords_df.values[3:,1:3] # only take the X,Y axis data
 
         if self.mobility:
             vel = cal_velocity(self.coords_xy)
@@ -63,7 +78,6 @@ class BaseDataset:
         """Load coordinates and spike data."""
         coords_df = pd.read_csv(self.data_dir/'position.csv',index_col=0)
         coords = coords_df.values[3:,1:3] # only take the X,Y axis data
-
         spikes_df = pd.read_csv(self.data_dir/'traces.csv',index_col=0)
         spikes = spikes_df.values
 
@@ -99,7 +113,7 @@ class BaseDataset:
         X_train, y_train = X[:train_size], y[:train_size]
         X_test, y_test = X[train_size:], y[train_size:]
         return (X_train, y_train), (X_test, y_test)
-    
+
 
 @dataclass
 class SpikesCoordDataset(BaseDataset):

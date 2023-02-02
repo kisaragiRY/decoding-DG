@@ -62,7 +62,6 @@ def test_SmoothedSpikesDataset(data_dir, coord_axis, window_size):
             return np.convolve(x, kernel, mode="same")
 
         return np.apply_along_axis(filtered, 0, design_spikes)
-
     # --- load dataset
 
     dataset = SmoothedSpikesDataset(data_dir, coord_axis, False, False)
