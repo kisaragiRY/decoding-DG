@@ -7,13 +7,7 @@ from typing import Tuple
 from param import *
 from dataloader import SmoothedSpikesDataset
 from model_selection import SearchCV
-
-def spilt_data(X: np.array, y: np.array, train_ratio: float) -> Tuple[Tuple[np.array,np.array],Tuple[np.array,np.array]]:
-    """Get training and testing data."""
-    train_size = int( len(X) * train_ratio )
-    X_train,y_train = X[:train_size], y[:train_size]
-    X_test,y_test = X[train_size:], y[train_size:]
-    return (X_train, y_train), (X_test, y_test)
+from util import spilt_data
 
 
 def main() -> None:
@@ -24,7 +18,7 @@ def main() -> None:
         dataset = SmoothedSpikesDataset(data_dir)
 
         results_all=[]
-        for nthist, coord_axis, window_size in product(ParamData().nthist_range, ParamData().coord_axis_opts, ParamData().window_size_range):
+        for nthist, coord_axis, window_size in product(ParamPastCoordData().nthist_range, ParamPastCoordData().coord_axis_opts, ParamPastCoordData().window_size_range):
             design_matrix, coord = dataset.load_all_data(coord_axis, nthist, window_size) # load coordinates and spikes data
 
             (X_train, y_train), (_, _) = spilt_data(design_matrix, coord, .8)

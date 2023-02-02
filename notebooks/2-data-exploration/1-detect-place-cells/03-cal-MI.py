@@ -14,8 +14,8 @@ def cal_all_MI(data_dir: Path):
     data_name = str(data_dir).split('/')[-1]
     original_MI, beh_shuffled_MI_all, event_shuffled_MI_all = [], [], []
     for i in tqdm(range(ParamShuffle().num_repeat)):
-        beh_dataset = BaseDataset(data_dir, ParamData().mobility,'behavior shuffling')
-        event_dataset = BaseDataset(data_dir, ParamData().mobility, 'events shuffling')
+        beh_dataset = BaseDataset(data_dir, 'behavior shuffling')
+        event_dataset = BaseDataset(data_dir, 'events shuffling')
 
         binned_position = bin_pos(beh_dataset.coords_xy, 2) # discretized into 2x2 grid
         shuffled_position = bin_pos(beh_dataset.shuffled_coords_xy, 2)
@@ -42,19 +42,10 @@ def cal_all_MI(data_dir: Path):
     }
     if not (ParamDir().output_dir/data_name).exists():
         (ParamDir().output_dir/data_name).mkdir()
-
-    with open(ParamDir().output_dir/data_name/"MI_mobility_all.pickle", "wb") as f:
+    with open(ParamDir().output_dir/data_name/"MI_all.pickle", "wb") as f:
         pickle.dump(result_MI, f)
 
 
 if __name__ == "__main__":
-    from joblib import Parallel, delayed
-    
-    parallel = Parallel(n_jobs=-1)
-    parallel(delayed(cal_all_MI)(
-        data_dir
-    )
-    for data_dir in tqdm(ParamDir().data_list)
-    )
-    # for data_dir in tqdm(ParamDir().data_list):
-    #     cal_all_MI(data_dir)
+    for data_dir in tqdm(ParamDir().data_list):
+        cal_all_MI(data_dir)
