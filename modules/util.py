@@ -15,7 +15,6 @@ def gauss2d(xx: NDArray, mu: float = 0, sigma: float = 3):
     kenel1d = gauss1d(xx, mu, sigma)
     return kenel1d[:, np.newaxis] * kenel1d[np.newaxis, :]
 
-
 def bin_pos(coords: NDArray, num_par: int = 2, partition_type : str = "grid") -> NDArray[np.int_]:
     """Discretize coordinates.
     
@@ -143,3 +142,11 @@ def get_pc_ratio(results_all:list) -> Tuple:
         if results_all['original MI'][neuron_id] > event_3sigma:
             pc_event_id.append(neuron_id)
     return (pc_beh_id, pc_event_id)
+
+def softmax(x: NDArray) -> NDArray:
+    """Return the softmax of the input vector x.
+    """
+    out = np.exp(x - np.max(x)) # to prevent data overflow
+    for i in range(len(x)):
+        out[i] /= np.sum(out)
+    return out
