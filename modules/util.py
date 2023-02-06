@@ -148,5 +148,5 @@ def softmax(x: NDArray) -> NDArray:
     """
     out = np.exp(x - np.max(x)) # to prevent data overflow
     for i in range(len(x)):
-        out[i] /= np.sum(out)
+        out[i] /= np.sum(out[i])
     return out
