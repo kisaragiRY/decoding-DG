@@ -20,3 +20,18 @@ class ParamDir:
             self.output_dir.mkdir()
 
         self.data_path_list = np.array([x for x in self.DATA_ROOT.iterdir()])
+
+@dataclass
+class ParamData:
+    """Param for dataset.
+    """
+    window_size : float = 5
+    train_ratio: float = .8
+
+@dataclass
+class ParamTrain:
+    """Param for training.
+    """
+    lr: float = .005
+    max_iter : int = 3000
+
