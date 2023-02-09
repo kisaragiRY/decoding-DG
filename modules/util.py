@@ -3,6 +3,7 @@ from numpy.typing import NDArray
 
 import numpy as np
 from numpy.linalg import det, inv
+from sklearn.utils import resample
 
 
 def gauss1d(xx: NDArray, mu: float = 0, sigma: float = .2):
@@ -150,3 +151,19 @@ def softmax(x: NDArray) -> NDArray:
     for i in range(len(x)):
         out[i] /= np.sum(out[i])
     return out
+
+def downsample(X: NDArray, y: NDArray) -> Tuple:
+    """Downsample X and y based on the minor class in y.
+    
+    Randomly select the samples in major classes in y and X accordingly.
+    """
+    classes, counts = np.unique(y, return_counts=True)
+    classes_resample = classes[classes != classes[np.argmin(counts)]]
+    count_min = np.min(counts)
+    X_new = X[y==classes[np.argmin(counts)]]
+    y_new = y[y==classes[np.argmin(counts)]]
+    for c in classes_resample:
+        X_tmp, y_tmp = resample(X[y==c], y[y==c], n_samples=count_min)
+        X_new = np.vstack((X_new, X_tmp))
+        y_new = np.append(y_new, y_tmp)
+    return X_new, y_new
