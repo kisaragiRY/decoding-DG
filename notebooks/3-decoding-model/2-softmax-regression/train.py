@@ -9,6 +9,7 @@ from imblearn.over_sampling import SMOTE
 
 from dataloader.dataset import BaseDataset
 from param import *
+from util import downsample
 # from decoder import SoftmaxRegression
 
 
@@ -43,13 +44,17 @@ class Dataset(BaseDataset):
         self.X_test = (self.X_test - self.X_test.mean(axis=0))/self.X_train.std(axis=0)
 
         # -- upsample
-        oversample = SMOTE()
-        self.X_train, self.y_train = oversample.fit_resample(self.X_train, self.y_train)
-        self.X_test, self.y_test = oversample.fit_resample(self.X_test, self.y_test)
+        # oversample = SMOTE()
+        # self.X_train, self.y_train = oversample.fit_resample(self.X_train, self.y_train)
+        # self.X_test, self.y_test = oversample.fit_resample(self.X_test, self.y_test)
+
+        # -- downsample
+        self.X_train, self.y_train = downsample(self.X_train, self.y_train)
+        self.X_test, self.y_test = downsample(self.X_test, self.y_test)
 
         # --- add offset(intercept)
-        self.X_train = np.hstack((np.ones((len(self.X_train),1)), self.X_train))
-        self.X_test = np.hstack((np.ones((len(self.X_test),1)), self.X_test))
+        # self.X_train = np.hstack((np.ones((len(self.X_train),1)), self.X_train))
+        # self.X_test = np.hstack((np.ones((len(self.X_test),1)), self.X_test))
 
         return (self.X_train, self.y_train), (self.X_test, self.y_test)
 
