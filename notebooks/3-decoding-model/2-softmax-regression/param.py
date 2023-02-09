@@ -25,7 +25,7 @@ class ParamDir:
 class ParamData:
     """Param for dataset.
     """
-    window_size : float = 5
+    window_size = range(2, 14)
     train_ratio: float = .8
 
 @dataclass
