@@ -32,8 +32,7 @@ def main():
 
         results = {
             # "losses": losses,
-            "estimator": result,
-            # "beta": beta,
+            "estimator": model,
             "y_test": y_test,
             "y_pred": y_pred #np.array([y+1 for y in np.argmax(y_pred, axis=1)])
         }
