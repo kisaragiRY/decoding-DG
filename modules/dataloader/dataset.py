@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from util import gauss1d, cal_velocity
+from util import gauss1d, cal_velocity, bin_pos
 
 def _is_valid_axis(coord_axis: str) -> bool:
     """Check whether the axis is valid.
@@ -33,13 +33,12 @@ class BaseDataset:
         the value can be either False, 'behavior shuffling' or 'events shuffling'.
     """
     data_dir : Path
-    coord_axis : str
     mobility : Union[bool, float]
     shuffle_method : Union[bool, str]
 
     def __post_init__(self) -> None:
         """Post precessing."""
-        self.coords_xy, self.spikes = self._load_data()
+        self.coords_xy, self.spikes = self._load_raw_data()
         if self.mobility:
             vel = cal_velocity(self.coords_xy)
             self.coords_xy = self.coords_xy[vel > self.mobility]
@@ -51,30 +50,7 @@ class BaseDataset:
             else:
                 self._shuffle()
 
-    def _load_data(self) -> Tuple[NDArray, NDArray]:
-        """Load coordinates and spike data."""
-        coords_df = pd.read_csv(self.data_dir/'position.csv',index_col=0)
-        coords = coords_df.values[3:,1:3] # only take the X,Y axis data
-
-        if self.mobility:
-            vel = cal_velocity(self.coords_xy)
-            self.coords_xy = self.coords_xy[vel > self.mobility]
-            self.spikes = self.spikes[vel > self.mobility]
-        
-        if not _is_valid_axis(self.coord_axis):
-            raise ValueError("Invalid axis name. The coord_axis can either be 'x-axis' or 'y-axis'.")
-
-        self.axis = 0 if self.coord_axis == "x-axis" else 1
-        self.y = self.coords_xy[:, self.axis]
-        self.X = self.spikes
-
-        if self.shuffle_method:
-            if self.shuffle_method not in ['behavior shuffling', 'events shuffling']:
-                raise ValueError("Please specify a valid shuffle method. It can either be 'behavior shuffling' or 'events shuffling'.")
-            else:
-                self._shuffle()
-
-    def _load_data(self) -> Tuple[NDArray, NDArray]:
+    def _load_raw_data(self) -> Tuple[NDArray, NDArray]:
         """Load coordinates and spike data."""
         coords_df = pd.read_csv(self.data_dir/'position.csv',index_col=0)
         coords = coords_df.values[3:,1:3] # only take the X,Y axis data
@@ -114,7 +90,22 @@ class BaseDataset:
         X_test, y_test = X[train_size:], y[train_size:]
         return (X_train, y_train), (X_test, y_test)
     
+    def _filter_spikes(self, window_size: int, X: NDArray) -> NDArray:
+        """Filter spikes with a gaussian kernel."""
+        kernel = gauss1d(np.linspace(-3, 3, window_size))
 
+        def filtered(x: NDArray) -> NDArray:
+            """Convovle with the given kernel."""
+            return np.convolve(x, kernel, mode="same")
+
+        return np.apply_along_axis(filtered, 0, X)
+    
+    def _discretize_coords(self):
+        """Discretize the coordinates.
+        """
+        return bin_pos(self.coords_xy)
+
+    
 @dataclass
 class SpikesCoordDataset(BaseDataset):
     """Dataset that includes one mouse's spikes and coordinates.
@@ -198,6 +189,7 @@ class SmoothedSpikesDataset(BaseDataset):
     This dataset is for regression model that incorporates past 
     coordinates and gassian kernel smoothed spikes.
     """  
+    coord_axis : str
     def _filter_spikes(self, window_size: int, X: NDArray) -> NDArray:
         """Filter spikes with the given kernel."""
         kernel = gauss1d(np.linspace(-3, 3, window_size))
@@ -302,5 +294,3 @@ class SummedSpikesDataset(BaseDataset):
         design_mat_all_offset = np.hstack((np.ones((len(design_m),1)), design_m))
 
         return design_mat_all_offset, self.coord[nthist:]
-
-

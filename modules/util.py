@@ -3,6 +3,7 @@ from numpy.typing import NDArray
 
 import numpy as np
 from numpy.linalg import det, inv
+from sklearn.utils import resample
 
 
 def gauss1d(xx: NDArray, mu: float = 0, sigma: float = .2):
@@ -14,7 +15,6 @@ def gauss2d(xx: NDArray, mu: float = 0, sigma: float = 3):
     """A 2 dimension Gaussian kernel."""
     kenel1d = gauss1d(xx, mu, sigma)
     return kenel1d[:, np.newaxis] * kenel1d[np.newaxis, :]
-
 
 def bin_pos(coords: NDArray, num_par: int = 2, partition_type : str = "grid") -> NDArray[np.int_]:
     """Discretize coordinates.
@@ -143,3 +143,27 @@ def get_pc_ratio(results_all:list) -> Tuple:
         if results_all['original MI'][neuron_id] > event_3sigma:
             pc_event_id.append(neuron_id)
     return (pc_beh_id, pc_event_id)
+
+def softmax(x: NDArray) -> NDArray:
+    """Return the softmax of the input vector x.
+    """
+    out = np.exp(x - np.max(x)) # to prevent data overflow
+    for i in range(len(x)):
+        out[i] /= np.sum(out[i])
+    return out
+
+def downsample(X: NDArray, y: NDArray) -> Tuple:
+    """Downsample X and y based on the minor class in y.
+    
+    Randomly select the samples in major classes in y and X accordingly.
+    """
+    classes, counts = np.unique(y, return_counts=True)
+    classes_resample = classes[classes != classes[np.argmin(counts)]]
+    count_min = np.min(counts)
+    X_new = X[y==classes[np.argmin(counts)]]
+    y_new = y[y==classes[np.argmin(counts)]]
+    for c in classes_resample:
+        X_tmp, y_tmp = resample(X[y==c], y[y==c], n_samples=count_min)
+        X_new = np.vstack((X_new, X_tmp))
+        y_new = np.append(y_new, y_tmp)
+    return X_new, y_new
