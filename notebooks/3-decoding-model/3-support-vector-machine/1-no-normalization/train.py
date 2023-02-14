@@ -64,7 +64,9 @@ def main():
         dataset = Dataset(data_dir, ParamData().mobility, False)
         (X_train, y_train), (X_test, y_test) = dataset.load_all_data(ParamData().window_size, ParamData().train_ratio)
 
-        model =  SVC(decision_function_shape="ovo")
+        model =  SVC(
+                decision_function_shape="ovr"
+                )
 
         # fit
         model.fit(X_train, y_train)
