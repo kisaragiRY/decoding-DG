@@ -78,7 +78,7 @@ def main():
         }
         if not (ParamDir().output_dir/data_name).exists():
             (ParamDir().output_dir/data_name).mkdir()
-        with open(ParamDir().output_dir/data_name/(f"svm_train.pickle"),"wb") as f:
+        with open(ParamDir().output_dir/data_name/(f"svm_train_without_normalization.pickle"),"wb") as f:
             pickle.dump(results, f)
 
 if __name__ == "__main__":
