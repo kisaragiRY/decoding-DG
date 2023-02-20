@@ -167,3 +167,17 @@ def downsample(X: NDArray, y: NDArray) -> Tuple:
         X_new = np.vstack((X_new, X_tmp))
         y_new = np.append(y_new, y_tmp)
     return X_new, y_new
+
+def segment(a: NDArray):
+    """Segment array into repeating sub arrays.
+
+    Return
+    ------
+    seg_ind: list
+        an array of segmentation indices.
+    """
+    seg_ind = []
+    for i in range(len(a)-1):
+        if a[i] != a[i+1]:
+            seg_ind.append(i+1)
+    return seg_ind
