@@ -1,5 +1,6 @@
 from typing import Tuple
 
+import pandas as pd
 from tqdm import tqdm
 import pickle
 from sktime.classification.kernel_based import RocketClassifier
@@ -52,7 +53,33 @@ class Dataset(BaseDataset):
                 y_new_train.append(str(y_new[_id]))
                 # X_seg_new.append(X) # unequal length
                 X_seg_new.append(np.vstack((X, np.zeros((max_len - len(X), n_neurons))))) # set to equal length with zeros
+
+        # filter the neuron: delete the neurons where the activity is zero across instances
+        neurons_to_use = np.vstack(X_seg_new).sum(axis=0)>0
+        X_seg_new = [X[:, neurons_to_use ] for X in X_seg_new]
+
         self.y_train = np.array(y_new_train)
+        self.X_train = pd.DataFrame([[pd.Series(i) for i in X.T] for X in X_seg_new])
+
+        # ---- test set
+        segment_ind = segment(self.y_test)
+
+        y_new = np.append(self.y_test[0], self.y_test[segment_ind])
+
+        X_seg = np.split(self.X_test, segment_ind)
+        X_seg_new, y_new_test = [], []
+        for _id, X in enumerate(X_seg):
+            if (len(X) <= max_len) and (len(X) > 3):
+                y_new_test.append(str(y_new[_id]))
+                # X_seg_new.append(X) # unequal length
+                X_seg_new.append(np.vstack((X, np.zeros((max_len - len(X), n_neurons))))) # set to equal length with zeros
+
+        # filter the neuron: delete the neurons where the activity is zero across instances
+        X_seg_new = [X[:, neurons_to_use ] for X in X_seg_new]
+
+        self.y_test = np.array(y_new_test)
+        self.X_test = pd.DataFrame([[pd.Series(i) for i in X.T] for X in X_seg_new])
+
 
         # --- add offset(intercept)
         # self.X_train = np.hstack((np.ones((len(self.X_train),1)), self.X_train))
@@ -83,7 +110,9 @@ def main():
             "y_test": y_test,
             "y_pred": y_pred #np.array([y+1 for y in np.argmax(y_pred, axis=1)])
         }
-        with open(ParamDir().output_dir/data_name/(f"sm_train_without_normalization.pickle"),"wb") as f:
+        if not (ParamDir().output_dir/data_name).exists():
+            (ParamDir().output_dir/data_name).mkdir()
+        with open(ParamDir().output_dir/data_name/(f"tsc_train_rocket.pickle"),"wb") as f:
             pickle.dump(results, f)
 
 if __name__ == "__main__":

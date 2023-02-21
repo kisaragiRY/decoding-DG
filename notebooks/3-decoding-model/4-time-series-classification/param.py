@@ -15,7 +15,7 @@ class ParamDir:
         if not self.OUTPUT_ROOT.exists():
             self.OUTPUT_ROOT.mkdir()
 
-        self.output_dir = self.OUTPUT_ROOT/"softmax_regression/"
+        self.output_dir = self.OUTPUT_ROOT/"time_series_classification/"
         if not self.output_dir.exists():
             self.output_dir.mkdir()
 
