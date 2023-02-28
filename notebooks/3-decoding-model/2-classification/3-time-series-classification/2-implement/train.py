@@ -98,7 +98,9 @@ def rocket_trainer():
         dataset = Dataset(data_dir, ParamData().mobility, False)
         (X_train, y_train), (X_test, y_test) = dataset.load_all_data(ParamData().window_size, ParamData().train_ratio)
 
-        model =  RocketClassifier(num_kernels=2000)
+        model =  RocketClassifier(
+            rocket_transform = "minirocket",
+            use_multivariate = "yes")
 
         # fit
         model.fit(X_train, y_train)
@@ -142,5 +144,5 @@ def kneighbors_trainer():
             pickle.dump(results, f)
 
 if __name__ == "__main__":
-    # rocket_trainer()
-    kneighbors_trainer()
+    rocket_trainer()
+    # kneighbors_trainer()
