@@ -54,16 +54,16 @@ class Dataset(BaseDataset):
             if len(X) > 3: # the instance time points need to be more than 3 bins
                 y_new_train.append(str(y_new[_id]))
                 # X_seg_new.append(X) # unequal length
-                X_seg_new.append(np.vstack((X, np.zeros((max_len - len(X), n_neurons))))) # set to equal length with zeros
+                X_seg_new.append(np.vstack((X, np.zeros((max_len - len(X), n_neurons)))).T) # set to equal length with zeros
 
         # filter the neuron: delete the neurons where the activity is zero across instances
         neurons_to_use = np.vstack(X_seg_new).sum(axis=0)>0
         X_seg_new = [X[:, neurons_to_use ] for X in X_seg_new]
 
         self.y_train = np.array(y_new_train)
-        self.X_train = pd.DataFrame([[pd.Series(i) for i in X.T] for X in X_seg_new])
+        self.X_train = np.array(X_seg_new)#pd.DataFrame([[pd.Series(i) for i in X.T] for X in X_seg_new])
 
-        # ---- test set
+        # test set
         segment_ind = segment(self.y_test)
 
         y_new = np.append(self.y_test[0], self.y_test[segment_ind])
@@ -74,13 +74,13 @@ class Dataset(BaseDataset):
             if (len(X) <= max_len) and (len(X) > 3):
                 y_new_test.append(str(y_new[_id]))
                 # X_seg_new.append(X) # unequal length
-                X_seg_new.append(np.vstack((X, np.zeros((max_len - len(X), n_neurons))))) # set to equal length with zeros
+                X_seg_new.append(np.vstack((X, np.zeros((max_len - len(X), n_neurons)))).T) # set to equal length with zeros
 
         # filter the neuron: delete the neurons where the activity is zero across instances
         X_seg_new = [X[:, neurons_to_use ] for X in X_seg_new]
 
         self.y_test = np.array(y_new_test)
-        self.X_test = pd.DataFrame([[pd.Series(i) for i in X.T] for X in X_seg_new])
+        self.X_test = np.array(X_seg_new)#pd.DataFrame([[pd.Series(i) for i in X.T] for X in X_seg_new])
 
 
         # --- add offset(intercept)
