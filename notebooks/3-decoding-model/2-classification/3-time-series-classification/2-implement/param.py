@@ -30,9 +30,7 @@ class ParamData:
     mobility : float = 1.0
 
 @dataclass
-class ParamTrain:
+class ParamaRocketTrain:
     """Param for training.
     """
-    penalty: str = "l2"
-    C = 8 # Inverse of regularization strength
-
+    num_kernels: int = 120

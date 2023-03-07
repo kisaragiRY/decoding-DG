@@ -111,6 +111,7 @@ def rocket_trainer():
         (X_train, y_train), (X_test, y_test) = dataset.load_all_data(ParamData().window_size, ParamData().train_ratio)
 
         model =  RocketClassifier(
+            num_kernels= ParamaRocketTrain().num_kernels,
             rocket_transform = "rocket",
             use_multivariate = "yes")
 
@@ -139,6 +140,7 @@ def rocket_trainer_balanced():
         (X_train, y_train), (X_test, y_test) = dataset.load_all_data(ParamData().window_size, ParamData().train_ratio)
 
         model =  RocketClassifier(
+            num_kernels= ParamaRocketTrain().num_kernels,
             rocket_transform = "rocket",
             use_multivariate = "yes")
 
