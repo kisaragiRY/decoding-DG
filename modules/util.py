@@ -169,13 +169,15 @@ def downsample(X: NDArray, y: NDArray) -> Tuple:
     return X_new, y_new
 
 def segment(a: NDArray):
-    """Segment array into repeating sub arrays.
+    """Segment array based on continuous positions.
 
     Return
     ------
     seg_ind: list
         an array of segmentation indices.
     """
+    if len(a) == 1: return [0]
+    if len(a) == 2: return [1] if a[0]==a[1] else [0]
     seg_ind = []
     for i in range(len(a)-1):
         if a[i] != a[i+1]:
