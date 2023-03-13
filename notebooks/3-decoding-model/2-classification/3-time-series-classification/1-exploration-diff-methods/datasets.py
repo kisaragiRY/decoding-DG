@@ -39,6 +39,51 @@ class Dataset(BaseDataset):
         self.X_train = self.X_train[:, active_neurons]
         self.X_test = self.X_test[:, active_neurons]
 
+        # --- smooth data
+        self.X_train = self._filter_spikes(window_size, self.X_train) 
+        self.X_test = self._filter_spikes(window_size, self.X_test)
+
+        # -- normaliza data
+        # self.X_train = (self.X_train - self.X_train.mean(axis=0))/self.X_train.std(axis=0)
+        # self.X_test = (self.X_test - self.X_test.mean(axis=0))/self.X_train.std(axis=0)
+
+        # -- downsample
+        # self.X_train, self.y_train = downsample(self.X_train, self.y_train)
+        # self.X_test, self.y_test = downsample(self.X_test, self.y_test)
+
+        # --- add offset(intercept)
+        # self.X_train = np.hstack((np.ones((len(self.X_train),1)), self.X_train))
+        # self.X_test = np.hstack((np.ones((len(self.X_test),1)), self.X_test))
+
+        return (self.X_train, self.y_train), (self.X_test, self.y_test)
+
+@dataclass
+class SegmentDataset(BaseDataset):
+    def __post_init__(self):
+        super().__post_init__()
+        self.y = self._discretize_coords()
+
+    def load_all_data(self, window_size : int, train_ratio: float) -> Tuple:
+        """Load design matrix and corresponding response(coordinate).
+        
+        Parameter
+        ------------
+        window_size : int
+            smoothing window size.
+        train_ratio: float
+            train set ratio
+        """
+        self.y = self._discretize_coords()
+        self.X = self.spikes
+
+        # --- split data
+        (self.X_train, self.y_train), (self.X_test, self.y_test) = self.split_data(self.X, self.y, train_ratio)
+
+        # --- remove inactive neurons
+        active_neurons = self.X_train.sum(axis=0)>0
+        self.X_train = self.X_train[:, active_neurons]
+        self.X_test = self.X_test[:, active_neurons]
+
         # # --- smooth data
         # self.X_train = self._filter_spikes(window_size, self.X_train) 
         # self.X_test = self._filter_spikes(window_size, self.X_test)
@@ -88,7 +133,7 @@ class Dataset(BaseDataset):
         return (self.X_train, self.y_train), (self.X_test, self.y_test)
     
 @dataclass
-class BalancedDataset(Dataset):
+class BalancedSegmentDataset(Dataset):
     """Balance Dataset.
     """
     def __post_init__(self):
