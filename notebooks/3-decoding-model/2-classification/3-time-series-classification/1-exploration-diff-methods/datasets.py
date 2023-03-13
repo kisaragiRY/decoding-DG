@@ -133,7 +133,7 @@ class SegmentDataset(BaseDataset):
         return (self.X_train, self.y_train), (self.X_test, self.y_test)
     
 @dataclass
-class BalancedSegmentDataset(Dataset):
+class BalancedSegmentDataset(SegmentDataset):
     """Balance Dataset.
     """
     def __post_init__(self):
