@@ -183,3 +183,59 @@ def segment(a: NDArray):
         if a[i] != a[i+1]:
             seg_ind.append(i+1)
     return seg_ind
+
+def segment_with_threshold(a: NDArray, K: int):
+    """Segment the array with a given threshold.
+
+    The segment must satisfy the following requirements.
+    1. the elements in one segment must be from the same group(e.g. position)
+    2. the length of the segment must be less than K and bigger than 9 time bins.
+        those segments whose length are less than K: use zero padding to supplement.
+        those segments whose length are less than 9: are discarted.
+
+    Return
+    ------
+    seg_ind: List
+        An array of segments index.
+    """
+    if len(a) == 1: return [0]
+    if len(a) == 2: return [1] if a[0]==a[1] else [0]
+    seg_ind = []
+    start = 0
+    for end in range(len(a)-1):
+        if (a[start] == a[end]) and (end-start+1<K):
+            continue
+        elif (a[start] == a[end]) and (end-start+1==K):
+            seg_ind.append(end)
+            start = end
+            continue
+        else:
+            if (end-start+1<9):
+                start = end
+                continue # discard the segment where it's smaller than 9 time bins (3 seconds)
+            else:
+                seg_ind.append(end)
+                start = end
+
+    return seg_ind
+
+def get_segment_data(segment_ind: NDArray, K: int, window_size: int, X: NDArray, y: NDArray):
+    """Get the segment data based on segment_ind.
+    """
+    kernel = gauss1d(np.linspace(-3, 3, window_size))
+    def filtered(x: NDArray) -> NDArray:
+        """Convovle with the given kernel."""
+        return np.convolve(x, kernel, mode="same")
+    
+    y_seg = np.append(y[0], y[segment_ind]) # segment y
+    X_seg = np.split(X, segment_ind) # segment X
+    n_neurons = X_seg[0].shape[1]
+
+    X_seg_smoothed, y_seg = [], []
+    for _id, X_int in enumerate(X_seg):
+        y_seg.append(str(y_seg[_id]))
+        X_int = np.apply_along_axis(filtered, 0, X_int) # smooth the interval
+        X_seg_smoothed.append(np.vstack((X_int, np.zeros((K - len(X_int), n_neurons)))).T) # set to equal length with zeros
+    return np.array(X_seg_smoothed), np.array(y_seg)
+
+
