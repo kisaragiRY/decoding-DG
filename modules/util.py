@@ -198,15 +198,15 @@ def segment_with_threshold(a: NDArray, K: int):
     seg_ind: List
         An array of segments index.
     """
-    if len(a) == 1: return [0]
-    if len(a) == 2: return [1] if a[0]==a[1] else [0]
+    if len(a) == 1: return [(0, 0)]
+    if len(a) == 2: return [(0, 1)] if a[0]==a[1] else [(0,0), (1,1)]
     seg_ind = []
     start = 0
     for end in range(len(a)-1):
         if (a[start] == a[end]) and (end-start+1<K):
             continue
         elif (a[start] == a[end]) and (end-start+1==K):
-            seg_ind.append(end)
+            seg_ind.append((start, end))
             start = end
             continue
         else:
@@ -214,7 +214,7 @@ def segment_with_threshold(a: NDArray, K: int):
                 start = end
                 continue # discard the segment where it's smaller than 9 time bins (3 seconds)
             else:
-                seg_ind.append(end)
+                seg_ind.append((start, end))
                 start = end
 
     return seg_ind
@@ -227,13 +227,15 @@ def get_segment_data(segment_ind: NDArray, K: int, window_size: int, X: NDArray,
         """Convovle with the given kernel."""
         return np.convolve(x, kernel, mode="same")
     
-    y_seg = np.append(y[0], y[segment_ind]) # segment y
-    X_seg = np.split(X, segment_ind) # segment X
+    y_seg, X_seg= [], []
+    for start, end in segment_ind:
+        y_seg.append(str(y[end])) # segment y
+        X_seg.append(X[start: end]) # segment X
+
     n_neurons = X_seg[0].shape[1]
 
-    X_seg_smoothed, y_seg = [], []
+    X_seg_smoothed = []
     for _id, X_int in enumerate(X_seg):
-        y_seg.append(str(y_seg[_id]))
         X_int = np.apply_along_axis(filtered, 0, X_int) # smooth the interval
         X_seg_smoothed.append(np.vstack((X_int, np.zeros((K - len(X_int), n_neurons)))).T) # set to equal length with zeros
     return np.array(X_seg_smoothed), np.array(y_seg)
