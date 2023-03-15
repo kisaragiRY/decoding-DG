@@ -5,7 +5,7 @@ from tqdm import tqdm
 import pickle
 from sktime.classification.kernel_based import RocketClassifier
 from sktime.classification.distance_based import KNeighborsTimeSeriesClassifier
-from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
+from sklearn.model_selection import GridSearchCV, TimeSeriesSplit, KFold, cross_val_score
 import statsmodels.api as sm
 
 from dataloader.dataset import BaseDataset
@@ -156,29 +156,23 @@ class ThresholdSegmentDataset(BaseDataset):
         super().__post_init__()
         self.y = self._discretize_coords()
     
-    def load_all_data(self, window_size : int, train_ratio: float, K: int) -> Tuple:
+    def load_all_data(self, window_size : int, K: int) -> Tuple:
         """Load design matrix and corresponding response(coordinate).
         
         Parameter
         ------------
         window_size : int
             smoothing window size.
-        train_ratio: float
-            train set ratio
         K: int
             segment length threshold.
         """
-        self.y = self._discretize_coords()
-        self.X = self.spikes
-
-        # --- split data
-        (self.X_train, self.y_train), (self.X_test, self.y_test) = self.split_data(self.X, self.y, train_ratio)
+        self.y_train = self._discretize_coords()
+        self.X_train = self.spikes
 
         # --- remove inactive neurons
         active_neurons = self.X_train.sum(axis=0)>0
         self.X_train = self.X_train[:, active_neurons]
-        self.X_test = self.X_test[:, active_neurons]
-
+        
         # --- segment data while smoothing
         segment_ind = segment_with_threshold(self.y_train, K) # get the segmentation indices
         X_train_new, self.y_train = get_segment_data(segment_ind, K, window_size, self.X_train, self.y_train)
@@ -187,15 +181,8 @@ class ThresholdSegmentDataset(BaseDataset):
         neurons_to_use = np.vstack(X_train_new).sum(axis=0)>0
         self.X_train = np.array([X[:, neurons_to_use ] for X in X_train_new])
 
-        # test set
-        segment_ind = segment_with_threshold(self.y_test, K) # get the segmentation indices
-        X_test_new, self.y_test = get_segment_data(segment_ind, K, window_size, self.X_test, self.y_test)
-        # filter the neuron: delete the neurons where the activity is zero across instances
-        self.X_test = np.array([X[:, neurons_to_use ] for X in X_test_new])
-
         # -- downsample
         self.X_train, self.y_train = downsample(self.X_train, self.y_train)
-        self.X_test, self.y_test = downsample(self.X_test, self.y_test)
 
 
-        return (self.X_train, self.y_train), (self.X_test, self.y_test)
+        return self.X_train, self.y_train
