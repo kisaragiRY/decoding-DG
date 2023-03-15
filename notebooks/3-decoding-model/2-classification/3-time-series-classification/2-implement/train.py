@@ -3,12 +3,14 @@ from typing import Tuple
 import pandas as pd
 from tqdm import tqdm
 import pickle
+from sktime.transformations.panel.rocket import Rocket
 from sktime.classification.kernel_based import RocketClassifier
 from sktime.classification.distance_based import KNeighborsTimeSeriesClassifier
-from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
-import statsmodels.api as sm
+from sklearn.model_selection import GridSearchCV, TimeSeriesSplit, cross_val_score, KFold
+from sklearn.linear_model import RidgeClassifier, LogisticRegression
+from sklearn.svm import SVC
 
-from dataloader.dataset import BaseDataset
+from datasets import *
 from param import *
 from util import segment, downsample
 
@@ -47,7 +49,7 @@ def rocket_trainer_balanced():
     for data_dir in tqdm(ParamDir().data_path_list):
         data_name = str(data_dir).split('/')[-1]
 
-        dataset = BalancedDataset(data_dir, ParamData().mobility, False)
+        dataset = BalancedSegmentDataset(data_dir, ParamData().mobility, False)
         (X_train, y_train), (X_test, y_test) = dataset.load_all_data(ParamData().window_size, ParamData().train_ratio)
 
         model =  RocketClassifier(
@@ -68,6 +70,48 @@ def rocket_trainer_balanced():
         if not (ParamDir().output_dir/data_name).exists():
             (ParamDir().output_dir/data_name).mkdir()
         with open(ParamDir().output_dir/data_name/(f"tsc_train_rocket_balanced.pickle"),"wb") as f:
+            pickle.dump(results, f)
+
+def rocket_trainer_threshold_segment():
+    """The training script.
+    """
+    for data_dir in tqdm(ParamDir().data_path_list):
+        data_name = str(data_dir).split('/')[-1]
+
+        dataset = ThresholdSegmentDataset(data_dir, ParamData().mobility, ParamData().shuffle)
+        X_train, y_train = dataset.load_all_data(ParamData().window_size, ParamData().K)
+
+        # rocket transform
+        X_train = Rocket(num_kernels= ParamaRocketTrain().num_kernels).fit_transform(X_train)
+
+        # model =  RocketClassifier(
+        #     num_kernels= ParamaRocketTrain().num_kernels,
+        #     rocket_transform = "rocket",
+        #     use_multivariate = "yes")
+        if ParamaRocketTrain().model_name == "Ridge":
+            model = RidgeClassifier()
+        elif ParamaRocketTrain().model_name == "SVM":
+            model = SVC()
+        elif ParamaRocketTrain().model_name == "Softmax":
+            model = LogisticRegression(
+                    multi_class='multinomial',
+                    solver="newton-cg",
+                    max_iter=1000,
+                    n_jobs=-1)
+
+        # cross validation
+        kfold = KFold(n_splits=ParamaRocketTrain().n_splits)
+        scores = cross_val_score(model, X_train, y_train, cv=kfold)
+
+        results = {
+            "estimator": model,
+            "scores": scores
+        }
+        if not (ParamDir().output_dir/data_name).exists():
+            (ParamDir().output_dir/data_name).mkdir()
+        with open(ParamDir().output_dir/data_name/
+                  (f"tsc_train_rocket_{ParamaRocketTrain().model_name}_threshold_segment_{ParamData().shuffle}.pickle"),
+                  "wb") as f:
             pickle.dump(results, f)
 
 def kneighbors_trainer():
@@ -97,6 +141,7 @@ def kneighbors_trainer():
             pickle.dump(results, f)
 
 if __name__ == "__main__":
-    rocket_trainer()
-    rocket_trainer_balanced()
+    # rocket_trainer()
+    # rocket_trainer_balanced()
+    rocket_trainer_threshold_segment()
     # kneighbors_trainer()

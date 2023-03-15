@@ -28,9 +28,13 @@ class ParamData:
     window_size = 12
     train_ratio: float = .8
     mobility : float = 1.0
+    K : int = 20 # the threshold for the length of segments
+    shuffle = "events shuffling" #"behavior shuffling" # there are two methods: behavior shuffling and events shuffling
 
 @dataclass
 class ParamaRocketTrain:
     """Param for training.
     """
+    model_name : str = "Ridge" # , "SVM", "Softmax"
     num_kernels: int = 120
+    n_splits : int = 10 # for cross validation
