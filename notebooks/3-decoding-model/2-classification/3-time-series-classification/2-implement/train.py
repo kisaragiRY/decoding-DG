@@ -82,7 +82,8 @@ def rocket_trainer_threshold_segment():
         X_train, y_train = dataset.load_all_data(ParamData().window_size, ParamData().K)
 
         # rocket transform
-        X_train = Rocket(num_kernels= ParamaRocketTrain().num_kernels).fit_transform(X_train)
+        X_train = Rocket(num_kernels=ParamData().num_kernels, 
+                         random_state=ParamData().random_state).fit_transform(X_train)
 
         # model =  RocketClassifier(
         #     num_kernels= ParamaRocketTrain().num_kernels,
@@ -111,6 +112,41 @@ def rocket_trainer_threshold_segment():
             (ParamDir().output_dir/data_name).mkdir()
         with open(ParamDir().output_dir/data_name/
                   (f"tsc_train_rocket_{ParamaRocketTrain().model_name}_threshold_segment_{ParamData().shuffle}.pickle"),
+                  "wb") as f:
+            pickle.dump(results, f)
+
+def LEM_trainer_threshold_segment():
+    """The training script.
+    """
+    for data_dir in tqdm(ParamDir().data_path_list):
+        data_name = str(data_dir).split('/')[-1]
+
+        dataset = DimRedDataset(data_dir, ParamData().mobility, ParamData().shuffle)
+        X_train, y_train = dataset.load_all_data(ParamData().window_size, ParamData().reduction_method)
+
+        if ParamaRocketTrain().model_name == "Ridge":
+            model = RidgeClassifier()
+        elif ParamaRocketTrain().model_name == "SVM":
+            model = SVC()
+        elif ParamaRocketTrain().model_name == "Softmax":
+            model = LogisticRegression(
+                    multi_class='multinomial',
+                    solver="newton-cg",
+                    max_iter=1000,
+                    n_jobs=-1)
+
+        # cross validation
+        kfold = KFold(n_splits=ParamaRocketTrain().n_splits)
+        scores = cross_val_score(model, X_train, y_train, cv=kfold)
+
+        results = {
+            "estimator": model,
+            "scores": scores
+        }
+        if not (ParamDir().output_dir/data_name).exists():
+            (ParamDir().output_dir/data_name).mkdir()
+        with open(ParamDir().output_dir/data_name/
+                  (f"tsc_train_LEM_{ParamaRocketTrain().model_name}_threshold_segment_{ParamData().shuffle}.pickle"),
                   "wb") as f:
             pickle.dump(results, f)
 
@@ -143,5 +179,6 @@ def kneighbors_trainer():
 if __name__ == "__main__":
     # rocket_trainer()
     # rocket_trainer_balanced()
-    rocket_trainer_threshold_segment()
+    # rocket_trainer_threshold_segment()
+    LEM_trainer_threshold_segment()
     # kneighbors_trainer()
