@@ -202,21 +202,25 @@ def segment_with_threshold(a: NDArray, K: int):
     if len(a) == 2: return [(0, 1)] if a[0]==a[1] else [(0,0), (1,1)]
     seg_ind = []
     start = 0
-    for end in range(len(a)-1):
-        if (a[start] == a[end]) and (end-start+1<K):
-            continue
-        elif (a[start] == a[end]) and (end-start+1==K):
+    end = 1
+    while end < len(a):
+        if (a[start] == a[end]) and (end-start+1==K): # a segment whose length is K
             seg_ind.append((start, end))
+            start = end + 1
+            end += 2
+            continue
+        if (a[start] != a[end]) and (end-start<9): # discard the segment where it's smaller than 9 time bins (3 seconds)
             start = end
+            end +=1
+            continue
+        if (a[start] != a[end]) and (end-start >= 9):
+            seg_ind.append((start, end))
+            start = end + 1
+            end += 2
             continue
         else:
-            if (end-start+1<9):
-                start = end
-                continue # discard the segment where it's smaller than 9 time bins (3 seconds)
-            else:
-                seg_ind.append((start, end))
-                start = end
-
+            end +=1
+            continue
     return seg_ind
 
 def get_segment_data(segment_ind: NDArray, K: int, window_size: int, X: NDArray, y: NDArray):
