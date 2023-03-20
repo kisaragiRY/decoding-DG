@@ -136,10 +136,6 @@ class ThresholdSegmentDataset(BaseDataset):
         super().__post_init__()
         self.y_train = self._discretize_coords()
         self.X_train = self.spikes
-
-        # --- remove inactive neurons
-        active_neurons = self.X_train.sum(axis=0)>0
-        self.X_train = self.X_train[:, active_neurons]
     
     def load_all_data(self, window_size : int, K: int) -> Tuple:
         """Load design matrix and corresponding response(coordinate).
@@ -151,6 +147,10 @@ class ThresholdSegmentDataset(BaseDataset):
         K: int
             segment length threshold.
         """
+        # --- remove inactive neurons
+        active_neurons = self.X_train.sum(axis=0)>0
+        self.X_train = self.X_train[:, active_neurons]
+        
         # --- segment data while smoothing
         segment_ind = segment_with_threshold(self.y_train, K) # get the segmentation indices
         X_train_new, self.y_train = get_segment_data(segment_ind, K, window_size, self.X_train, self.y_train)
