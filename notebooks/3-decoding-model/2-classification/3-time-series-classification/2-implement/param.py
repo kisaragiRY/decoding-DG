@@ -1,4 +1,5 @@
 from typing import List
+from numpy.typing import NDArray
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -25,18 +26,20 @@ class ParamDir:
 class ParamData:
     """Param for dataset.
     """
-    window_size = 12
+    window_size = 8
     train_ratio: float = .8
     mobility : float = 1.0
-    K : int = 20 # the threshold for the length of segments
-    shuffle =  False # there are two methods: behavior shuffling and events shuffling
+    K : int = 16 # the threshold for the length of segments
+    shuffle =  "events shuffling" # there are two methods: behavior shuffling and events shuffling
     reduction_method: str = "LEM"
     random_state : int = 20130315
-    num_kernels: int = 120
+    num_kernels: int = 180
 
 @dataclass
 class ParamaRocketTrain:
     """Param for training.
     """
-    model_name : str = "Ridge" # , "SVM", "Softmax"
+    model_name : str = "SVM" # "Ridge", "SVM", "Softmax", "Kmeans"
     n_splits : int = 10 # for cross validation
+    alphas: NDArray = np.logspace(-3, 3, 10)
+    Cs: NDArray = np.logspace(-3, 3, 10)
