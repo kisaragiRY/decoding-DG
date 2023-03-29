@@ -33,13 +33,14 @@ class ParamData:
     shuffle =  "events shuffling" # there are two methods: behavior shuffling and events shuffling
     reduction_method: str = "LEM"
     random_state : int = 20130315
-    num_kernels: int = 180
+    num_kernels_KO: int = 250
+    num_kernels_WT: int = 300
 
 @dataclass
 class ParamaRocketTrain:
     """Param for training.
     """
-    model_name : str = "SVM" # "Ridge", "SVM", "Softmax", "Kmeans"
+    model_name : str = "SVM" # "Ridge", "SVM", "Softmax", 
     n_splits : int = 10 # for cross validation
     alphas: NDArray = np.logspace(-3, 3, 10)
     Cs: NDArray = np.logspace(-3, 3, 10)

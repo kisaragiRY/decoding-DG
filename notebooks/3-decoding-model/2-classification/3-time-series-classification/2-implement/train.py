@@ -7,11 +7,13 @@ import pickle
 from sktime.transformations.panel.rocket import Rocket, MiniRocketMultivariate
 from sktime.classification.kernel_based import RocketClassifier
 from sktime.classification.distance_based import KNeighborsTimeSeriesClassifier
-from sklearn.preprocessing import Normalizer
+from sklearn.preprocessing import Normalizer, StandardScaler
 from sklearn.model_selection import GridSearchCV, TimeSeriesSplit, cross_val_score, KFold
+from sklearn.pipeline import Pipeline
 from sklearn.linear_model import RidgeClassifier, LogisticRegression
 from sklearn.cluster import KMeans
 from sklearn.svm import SVC
+from sklearn.manifold import Isomap
 from itertools import product
 
 from datasets import *
@@ -86,18 +88,17 @@ def rocket_trainer_threshold_segment():
         (X_train, y_train), (X_test, y_test) = dataset.load_all_data(ParamData().window_size, ParamData().train_ratio, ParamData().K)
 
         # rocket transform
-        rocket = Rocket(num_kernels=ParamData().num_kernels, 
-                         random_state=ParamData().random_state)
-        X_train = rocket.fit_transform(X_train).values
+        num_kernels = ParamData().num_kernels_KO if "KO" in data_name else ParamData().num_kernels_WT
+        transform_pipeline = Pipeline([
+            ("rocket", Rocket(num_kernels, random_state=ParamData().random_state)),
+            ("std_scaler", StandardScaler()),
+            ("l2_norm", Normalizer()),
+        ])
+        X_train = transform_pipeline.fit_transform(X_train)
         active_features = X_train.sum(axis=0)>0
         X_train = X_train[:, active_features]
-        X_test = rocket.transform(X_test).values
+        X_test = transform_pipeline.transform(X_test)
         X_test = X_test[:, active_features]
-
-        # L2 normalization
-        norm = Normalizer().fit(X_train)
-        X_train = norm.transform(X_train)
-        X_test = norm.transform(X_test)
 
         # cross validation
         kfold = KFold(n_splits=ParamaRocketTrain().n_splits)
@@ -120,13 +121,6 @@ def rocket_trainer_threshold_segment():
                     n_jobs=-1)
             clf = GridSearchCV(model, 
                             param_grid={"C": ParamaRocketTrain().Cs},
-                            cv=kfold)
-        elif ParamaRocketTrain().model_name == "Kmeans":
-            model = KMeans(
-                    n_clusters=4,
-                    random_state=ParamData().random_state)
-            clf = GridSearchCV(model, 
-                            param_grid={"algorithm": ["lloyd", "elkan"]},
                             cv=kfold)
         clf.fit(X_train, y_train)
 
@@ -216,25 +210,25 @@ def rocket_trainer_tuning(data_dir, K_range, kernels_range, note):
         (X_train, y_train), (X_test, y_test) = dataset.load_all_data(ParamData().window_size, ParamData().train_ratio, K)
 
         # rocket transform
-        rocket = Rocket(num_kernels, 
-                        random_state=ParamData().random_state)
-        X_train = rocket.fit_transform(X_train).values
+        transform_pipeline = Pipeline([
+            ("rocket", Rocket(num_kernels, random_state=ParamData().random_state)),
+            ("std_scaler", StandardScaler()),
+            ("l2_norm", Normalizer()),
+        ])
+        X_train = transform_pipeline.fit_transform(X_train)
         active_features = X_train.sum(axis=0)>0
         X_train = X_train[:, active_features]
-        X_test = rocket.transform(X_test).values
+        X_test = transform_pipeline.transform(X_test)
         X_test = X_test[:, active_features]
 
         # normalization
         if X_train.shape[1]==0: 
             print(f"with K:{K} & num_kernels:{num_kernels}, found zero features")
             continue
-        norm = Normalizer().fit(X_train)
-        X_train = norm.transform(X_train)
-        X_test = norm.transform(X_test)
 
         # cv tuning
         kfold = KFold(n_splits=ParamaRocketTrain().n_splits)
-        model = RidgeClassifier()
+        model = RidgeClassifier(random_state=ParamData().random_state)
         clf = GridSearchCV(model, 
                             param_grid={"alpha": ParamaRocketTrain().alphas},
                             cv=kfold)
@@ -244,6 +238,7 @@ def rocket_trainer_tuning(data_dir, K_range, kernels_range, note):
         scores = clf.score(X_test, y_test)
 
         res = {
+            "estimator": clf, 
             "scores": scores,
             "K": K,
             "num_kernels": num_kernels,
@@ -254,6 +249,7 @@ def rocket_trainer_tuning(data_dir, K_range, kernels_range, note):
     with open(ParamDir().output_dir/data_name/(f"tsc_tuning_rocket_{note}.pickle"),"wb") as f:
         pickle.dump(res_all, f)
 
+
 if __name__ == "__main__":
     # rocket_trainer()
     # rocket_trainer_balanced()
@@ -262,17 +258,20 @@ if __name__ == "__main__":
     # kneighbors_trainer()
 
     # ---- large scale tuning -----
-    # K_range = range(10, 81, 5)
-    # kernels_range = [2**i for i in range(1, 11)]
-    # # rocket_trainer_tuning(K_range, kernels_range, "large_scale")
+    # K_range = [16]
+    # kernels_range = [2**i for i in range(2, 11)]
+    # # # rocket_trainer_tuning(K_range, kernels_range, "large_scale")
     # Parallel(n_jobs=-1)(delayed(
     #     rocket_trainer_tuning(data_dir, K_range, kernels_range, "large_scale")
-    #     )(data_dir) for data_dir in tqdm(ParamDir().data_path_list[2:]))
+    #     )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
 
     # ---- small scale tuning ----
-    # K_range = [20]
-    # kernels_range = range(100, 500, 5)
-    # rocket_trainer_tuning(K_range, kernels_range, "small_scale")
+    # K_range = [16]
+    # kernels_range = range(100, 600, 20)
+    # # rocket_trainer_tuning(K_range, kernels_range, "small_scale")
+    # Parallel(n_jobs=-1)(delayed(
+    #     rocket_trainer_tuning(data_dir, K_range, kernels_range, "small_scale")
+    #     )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
 
     # ---- small scale tuning 2 ----
     # K_range = [20]
