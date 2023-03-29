@@ -169,15 +169,79 @@ def downsample(X: NDArray, y: NDArray) -> Tuple:
     return X_new, y_new
 
 def segment(a: NDArray):
-    """Segment array into repeating sub arrays.
+    """Segment array based on continuous positions.
 
     Return
     ------
     seg_ind: list
         an array of segmentation indices.
     """
+    if len(a) == 1: return [0]
+    if len(a) == 2: return [1] if a[0]==a[1] else [0]
     seg_ind = []
     for i in range(len(a)-1):
         if a[i] != a[i+1]:
             seg_ind.append(i+1)
     return seg_ind
+
+def segment_with_threshold(a: NDArray, K: int):
+    """Segment the array with a given threshold.
+
+    The segment must satisfy the following requirements.
+    1. the elements in one segment must be from the same group(e.g. position)
+    2. the length of the segment must be less than K and bigger than 9 time bins.
+        those segments whose length are less than K: use zero padding to supplement.
+        those segments whose length are less than 9: are discarted.
+
+    Return
+    ------
+    seg_ind: List
+        An array of segments index.
+    """
+    if len(a) == 1: return [(0, 0)]
+    if len(a) == 2: return [(0, 1)] if a[0]==a[1] else [(0,0), (1,1)]
+    seg_ind = []
+    start = 0
+    end = 1
+    while end < len(a):
+        if (a[start] == a[end]) and (end-start+1==K): # a segment whose length is K
+            seg_ind.append((start, end))
+            start = end + 1
+            end += 2
+            continue
+        if (a[start] != a[end]) and (end-start<9): # discard the segment where it's smaller than 9 time bins (3 seconds)
+            start = end
+            end +=1
+            continue
+        if (a[start] != a[end]) and (end-start >= 9):
+            seg_ind.append((start, end))
+            start = end + 1
+            end += 2
+            continue
+        else:
+            end +=1
+            continue
+    return seg_ind
+
+def get_segment_data(segment_ind: NDArray, K: int, window_size: int, X: NDArray, y: NDArray):
+    """Get the segment data based on segment_ind.
+    """
+    kernel = gauss1d(np.linspace(-3, 3, window_size))
+    def filtered(x: NDArray) -> NDArray:
+        """Convovle with the given kernel."""
+        return np.convolve(x, kernel, mode="same")
+    
+    y_seg, X_seg= [], []
+    for start, end in segment_ind:
+        y_seg.append(str(y[end])) # segment y
+        X_seg.append(X[start: end]) # segment X
+
+    n_neurons = X_seg[0].shape[1]
+
+    X_seg_smoothed = []
+    for _id, X_int in enumerate(X_seg):
+        X_int = np.apply_along_axis(filtered, 0, X_int) # smooth the interval
+        X_seg_smoothed.append(np.vstack((X_int, np.zeros((K - len(X_int), n_neurons)))).T) # set to equal length with zeros
+    return np.array(X_seg_smoothed), np.array(y_seg)
+
+

@@ -20,3 +20,17 @@ class ParamDir:
             self.output_dir.mkdir()
 
         self.data_path_list = np.array([x for x in self.DATA_ROOT.iterdir()])
+
+@dataclass
+class ParamData:
+    """Param for dataset.
+    """
+    window_size = 12
+    train_ratio: float = .8
+    mobility : float = 1.0
+
+@dataclass
+class ParamaRocketTrain:
+    """Param for training.
+    """
+    num_kernels: int = 120

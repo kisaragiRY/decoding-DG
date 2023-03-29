@@ -3,60 +3,40 @@ from typing import Tuple
 import pandas as pd
 from tqdm import tqdm
 import pickle
-from sktime.classification.kernel_based import RocketClassifier
-from sktime.classification.distance_based import KNeighborsTimeSeriesClassifier
-from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
-import statsmodels.api as sm
+from sklearn.manifold import SpectralEmbedding
+from sklearn.decomposition import PCA
 
 from dataloader.dataset import BaseDataset
 from param import *
 from util import segment, downsample, segment_with_threshold, get_segment_data
 
 @dataclass
-class Dataset(BaseDataset):
+class DownsampleDataset(BaseDataset):
     def __post_init__(self):
         super().__post_init__()
-        self.y = self._discretize_coords()
+        self.y_train = self._discretize_coords()
+        self.X_train = self.spikes
 
-    def load_all_data(self, window_size : int, train_ratio: float) -> Tuple:
+        # --- remove inactive neurons
+        active_neurons = self.X_train.sum(axis=0)>0
+        self.X_train = self.X_train[:, active_neurons]
+
+    def load_all_data(self, window_size : int) -> Tuple:
         """Load design matrix and corresponding response(coordinate).
         
         Parameter
         ------------
         window_size : int
             smoothing window size.
-        train_ratio: float
-            train set ratio
         """
-        self.y = self._discretize_coords()
-        self.X = self.spikes
-
-        # --- split data
-        (self.X_train, self.y_train), (self.X_test, self.y_test) = self.split_data(self.X, self.y, train_ratio)
-
-        # --- remove inactive neurons
-        active_neurons = self.X_train.sum(axis=0)>0
-        self.X_train = self.X_train[:, active_neurons]
-        self.X_test = self.X_test[:, active_neurons]
-
         # --- smooth data
         self.X_train = self._filter_spikes(window_size, self.X_train) 
-        self.X_test = self._filter_spikes(window_size, self.X_test)
-
-        # -- normaliza data
-        # self.X_train = (self.X_train - self.X_train.mean(axis=0))/self.X_train.std(axis=0)
-        # self.X_test = (self.X_test - self.X_test.mean(axis=0))/self.X_train.std(axis=0)
 
         # -- downsample
-        # self.X_train, self.y_train = downsample(self.X_train, self.y_train)
-        # self.X_test, self.y_test = downsample(self.X_test, self.y_test)
+        self.X_train, self.y_train = downsample(self.X_train, self.y_train)
 
-        # --- add offset(intercept)
-        # self.X_train = np.hstack((np.ones((len(self.X_train),1)), self.X_train))
-        # self.X_test = np.hstack((np.ones((len(self.X_test),1)), self.X_test))
-
-        return (self.X_train, self.y_train), (self.X_test, self.y_test)
-
+        return self.X_train, self.y_train
+    
 @dataclass
 class SegmentDataset(BaseDataset):
     def __post_init__(self):
@@ -155,6 +135,7 @@ class ThresholdSegmentDataset(BaseDataset):
     def __post_init__(self):
         super().__post_init__()
         self.y = self._discretize_coords()
+        self.X = self.spikes
     
     def load_all_data(self, window_size : int, train_ratio: float, K: int) -> Tuple:
         """Load design matrix and corresponding response(coordinate).
@@ -163,39 +144,70 @@ class ThresholdSegmentDataset(BaseDataset):
         ------------
         window_size : int
             smoothing window size.
-        train_ratio: float
-            train set ratio
         K: int
             segment length threshold.
         """
-        self.y = self._discretize_coords()
-        self.X = self.spikes
-
-        # --- split data
+        # --- split data 
         (self.X_train, self.y_train), (self.X_test, self.y_test) = self.split_data(self.X, self.y, train_ratio)
 
         # --- remove inactive neurons
         active_neurons = self.X_train.sum(axis=0)>0
         self.X_train = self.X_train[:, active_neurons]
         self.X_test = self.X_test[:, active_neurons]
-
+        
         # --- segment data while smoothing
+        # train set
         segment_ind = segment_with_threshold(self.y_train, K) # get the segmentation indices
         X_train_new, self.y_train = get_segment_data(segment_ind, K, window_size, self.X_train, self.y_train)
-
-        # filter the neuron: delete the neurons where the activity is zero across instances
-        neurons_to_use = np.vstack(X_train_new).sum(axis=0)>0
-        self.X_train = np.array([X[:, neurons_to_use ] for X in X_train_new])
-
         # test set
         segment_ind = segment_with_threshold(self.y_test, K) # get the segmentation indices
         X_test_new, self.y_test = get_segment_data(segment_ind, K, window_size, self.X_test, self.y_test)
-        # filter the neuron: delete the neurons where the activity is zero across instances
-        self.X_test = np.array([X[:, neurons_to_use ] for X in X_test_new])
+
+        # # filter the neuron: delete the neurons where the activity is zero across instances
+        # neurons_to_use = np.vstack(X_train_new).sum(axis=0)>0
+        # self.X_train = np.array([X[:, neurons_to_use ] for X in X_train_new])
+        # self.X_test = np.array([X[:, neurons_to_use ] for X in X_test_new])
 
         # -- downsample
-        self.X_train, self.y_train = downsample(self.X_train, self.y_train)
-        self.X_test, self.y_test = downsample(self.X_test, self.y_test)
+        self.X_train, self.y_train = downsample(X_train_new, self.y_train)
+        self.X_test, self.y_test = downsample(X_test_new, self.y_test)
 
 
         return (self.X_train, self.y_train), (self.X_test, self.y_test)
+
+@dataclass
+class DimRedDataset(BaseDataset):
+    """Dimension reduction balanced dataset.
+    """
+    def __post_init__(self):
+        super().__post_init__()
+        self.y_train = self._discretize_coords()
+        self.X_train = self.spikes
+    
+    def load_all_data(self, window_size: int, reduction_method: str) -> Tuple:
+        """Load design matrix and corresponding response(coordinate).
+        
+        Parameter
+        ------------
+        window_size: int
+            smoothing window size.
+        reduction_method: str
+            the reduction method to reduce dimesions of the data.
+        """
+        # --- remove inactive neurons
+        active_neurons = self.X_train.sum(axis=0)>0
+        self.X_train = self.X_train[:, active_neurons]
+        
+        # --- smooth data
+        self.X_train = self._filter_spikes(window_size, self.X_train) 
+
+        if reduction_method == "LEM":
+            self.X_train = SpectralEmbedding(n_components=10, 
+                                             n_neighbors=int(.005*len(self.X_train))).fit_transform(self.X_train)
+        elif reduction_method == "PCA":
+            self.X_train = PCA(n_components=10).fit_transform(self.X_train)
+
+        # -- downsample
+        self.X_train, self.y_train = downsample(self.X_train, self.y_train)
+
+        return self.X_train, self.y_train

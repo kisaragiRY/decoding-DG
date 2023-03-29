@@ -1,106 +1,25 @@
 from typing import Tuple
 
+from joblib import Parallel, delayed
 import pandas as pd
 from tqdm import tqdm
 import pickle
+from sktime.transformations.panel.rocket import Rocket, MiniRocketMultivariate
 from sktime.classification.kernel_based import RocketClassifier
 from sktime.classification.distance_based import KNeighborsTimeSeriesClassifier
-from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
-import statsmodels.api as sm
+from sklearn.preprocessing import Normalizer, StandardScaler
+from sklearn.model_selection import GridSearchCV, TimeSeriesSplit, cross_val_score, KFold
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import RidgeClassifier, LogisticRegression
+from sklearn.cluster import KMeans
+from sklearn.svm import SVC
+from sklearn.manifold import Isomap
+from itertools import product
 
-from dataloader.dataset import BaseDataset
+from datasets import *
 from param import *
 from util import segment, downsample
 
-@dataclass
-class Dataset(BaseDataset):
-    def __post_init__(self):
-        super().__post_init__()
-        self.y = self._discretize_coords()
-
-    def load_all_data(self, window_size : int, train_ratio: float) -> Tuple:
-        """Load design matrix and corresponding response(coordinate).
-        
-        Parameter
-        ------------
-        window_size : int
-            smoothing window size.
-        train_ratio: float
-            train set ratio
-        """
-        self.y = self._discretize_coords()
-        self.X = self.spikes
-
-        # --- split data
-        (self.X_train, self.y_train), (self.X_test, self.y_test) = self.split_data(self.X, self.y, train_ratio)
-
-        # --- remove inactive neurons
-        active_neurons = self.X_train.sum(axis=0)>0
-        self.X_train = self.X_train[:, active_neurons]
-        self.X_test = self.X_test[:, active_neurons]
-
-        # # --- smooth data
-        # self.X_train = self._filter_spikes(window_size, self.X_train) 
-        # self.X_test = self._filter_spikes(window_size, self.X_test)
-
-        # --- segment data
-        segment_ind = segment(self.y_train) # get the segmentation indices
-        y_new = np.append(self.y_train[0], self.y_train[segment_ind]) # segment y
-        X_seg = np.split(self.X_train, segment_ind) # segment X
-        max_len = max([len(X) for X in X_seg])
-        n_neurons = X_seg[0].shape[1]
-        X_seg_new, y_new_train = [], []
-        for _id, X in enumerate(X_seg):
-            if len(X) > 3: # the instance time points need to be more than 3 bins
-                X = self._filter_spikes(window_size, X) # smooth the interval
-                y_new_train.append(str(y_new[_id]))
-                # X_seg_new.append(X) # unequal length
-                X_seg_new.append(np.vstack((X, np.zeros((max_len - len(X), n_neurons)))).T) # set to equal length with zeros
-
-        # filter the neuron: delete the neurons where the activity is zero across instances
-        neurons_to_use = np.vstack(X_seg_new).sum(axis=0)>0
-        X_seg_new = [X[:, neurons_to_use ] for X in X_seg_new]
-
-        self.y_train = np.array(y_new_train)
-        self.X_train = np.array(X_seg_new)#pd.DataFrame([[pd.Series(i) for i in X.T] for X in X_seg_new])
-
-        # test set
-        segment_ind = segment(self.y_test)
-
-        y_new = np.append(self.y_test[0], self.y_test[segment_ind])
-
-        X_seg = np.split(self.X_test, segment_ind)
-        X_seg_new, y_new_test = [], []
-        for _id, X in enumerate(X_seg):
-            if (len(X) <= max_len) and (len(X) > 3):
-                X = self._filter_spikes(window_size, X) 
-                y_new_test.append(str(y_new[_id]))
-                # X_seg_new.append(X) # unequal length
-                X_seg_new.append(np.vstack((X, np.zeros((max_len - len(X), n_neurons)))).T) # set to equal length with zeros
-
-        # filter the neuron: delete the neurons where the activity is zero across instances
-        X_seg_new = [X[:, neurons_to_use ] for X in X_seg_new]
-
-        self.y_test = np.array(y_new_test)
-        self.X_test = np.array(X_seg_new)#pd.DataFrame([[pd.Series(i) for i in X.T] for X in X_seg_new])
-
-
-        return (self.X_train, self.y_train), (self.X_test, self.y_test)
-    
-@dataclass
-class BalancedDataset(Dataset):
-    """Balance Dataset.
-    """
-    def __post_init__(self):
-        super().__post_init__()
-
-    def load_all_data(self, window_size: int, train_ratio: float) -> Tuple:
-        (self.X_train, self.y_train), (self.X_test, self.y_test) = super().load_all_data(window_size, train_ratio)
-        # -- downsample
-        self.X_train, self.y_train = downsample(self.X_train, self.y_train)
-        self.X_test, self.y_test = downsample(self.X_test, self.y_test)
-
-        return (self.X_train, self.y_train), (self.X_test, self.y_test)  
 def rocket_trainer():
     """The training script.
     """
@@ -111,6 +30,7 @@ def rocket_trainer():
         (X_train, y_train), (X_test, y_test) = dataset.load_all_data(ParamData().window_size, ParamData().train_ratio)
 
         model =  RocketClassifier(
+            num_kernels= ParamaRocketTrain().num_kernels,
             rocket_transform = "rocket",
             use_multivariate = "yes")
 
@@ -135,10 +55,11 @@ def rocket_trainer_balanced():
     for data_dir in tqdm(ParamDir().data_path_list):
         data_name = str(data_dir).split('/')[-1]
 
-        dataset = BalancedDataset(data_dir, ParamData().mobility, False)
+        dataset = BalancedSegmentDataset(data_dir, ParamData().mobility, False)
         (X_train, y_train), (X_test, y_test) = dataset.load_all_data(ParamData().window_size, ParamData().train_ratio)
 
         model =  RocketClassifier(
+            num_kernels= ParamaRocketTrain().num_kernels,
             rocket_transform = "rocket",
             use_multivariate = "yes")
 
@@ -155,6 +76,101 @@ def rocket_trainer_balanced():
         if not (ParamDir().output_dir/data_name).exists():
             (ParamDir().output_dir/data_name).mkdir()
         with open(ParamDir().output_dir/data_name/(f"tsc_train_rocket_balanced.pickle"),"wb") as f:
+            pickle.dump(results, f)
+
+def rocket_trainer_threshold_segment():
+    """The training script.
+    """
+    for data_dir in tqdm(ParamDir().data_path_list):
+        data_name = str(data_dir).split('/')[-1]
+
+        dataset = ThresholdSegmentDataset(data_dir, ParamData().mobility, ParamData().shuffle)
+        (X_train, y_train), (X_test, y_test) = dataset.load_all_data(ParamData().window_size, ParamData().train_ratio, ParamData().K)
+
+        # rocket transform
+        num_kernels = ParamData().num_kernels_KO if "KO" in data_name else ParamData().num_kernels_WT
+        transform_pipeline = Pipeline([
+            ("rocket", Rocket(num_kernels, random_state=ParamData().random_state)),
+            ("std_scaler", StandardScaler()),
+            ("l2_norm", Normalizer()),
+        ])
+        X_train = transform_pipeline.fit_transform(X_train)
+        active_features = X_train.sum(axis=0)>0
+        X_train = X_train[:, active_features]
+        X_test = transform_pipeline.transform(X_test)
+        X_test = X_test[:, active_features]
+
+        # cross validation
+        kfold = KFold(n_splits=ParamaRocketTrain().n_splits)
+        if ParamaRocketTrain().model_name == "Ridge":
+            model = RidgeClassifier()
+            clf = GridSearchCV(model, 
+                            param_grid={"alpha": ParamaRocketTrain().alphas},
+                            cv=kfold)
+        elif ParamaRocketTrain().model_name == "SVM":
+            model = SVC()
+            clf = GridSearchCV(model, 
+                            param_grid={"C": ParamaRocketTrain().Cs,
+                                        "kernel": ["rbf", "sigmoid"]},
+                            cv=kfold)
+        elif ParamaRocketTrain().model_name == "Softmax":
+            model = LogisticRegression(
+                    multi_class='multinomial',
+                    solver="newton-cg",
+                    max_iter=1000,
+                    n_jobs=-1)
+            clf = GridSearchCV(model, 
+                            param_grid={"C": ParamaRocketTrain().Cs},
+                            cv=kfold)
+        clf.fit(X_train, y_train)
+
+        # scoring
+        scores = clf.score(X_test, y_test)
+
+        results = {
+            "estimator": clf,
+            "scores": scores
+        }
+        if not (ParamDir().output_dir/data_name).exists():
+            (ParamDir().output_dir/data_name).mkdir()
+        with open(ParamDir().output_dir/data_name/
+                  (f"tsc_train_rocket_{ParamaRocketTrain().model_name}_threshold_segment_{ParamData().shuffle}.pickle"),
+                  "wb") as f:
+            pickle.dump(results, f)
+
+def LEM_trainer_threshold_segment():
+    """The training script.
+    """
+    for data_dir in tqdm(ParamDir().data_path_list):
+        data_name = str(data_dir).split('/')[-1]
+
+        dataset = DimRedDataset(data_dir, ParamData().mobility, ParamData().shuffle)
+        X_train, y_train = dataset.load_all_data(ParamData().window_size, ParamData().reduction_method)
+
+        if ParamaRocketTrain().model_name == "Ridge":
+            model = RidgeClassifier()
+        elif ParamaRocketTrain().model_name == "SVM":
+            model = SVC()
+        elif ParamaRocketTrain().model_name == "Softmax":
+            model = LogisticRegression(
+                    multi_class='multinomial',
+                    solver="newton-cg",
+                    max_iter=1000,
+                    n_jobs=-1)
+
+        # cross validation
+        kfold = KFold(n_splits=ParamaRocketTrain().n_splits)
+        scores = cross_val_score(model, X_train, y_train, cv=kfold)
+
+        results = {
+            "estimator": model,
+            "scores": scores
+        }
+        if not (ParamDir().output_dir/data_name).exists():
+            (ParamDir().output_dir/data_name).mkdir()
+        with open(ParamDir().output_dir/data_name/
+                  (f"tsc_train_LEM_{ParamaRocketTrain().model_name}_threshold_segment_{ParamData().shuffle}.pickle"),
+                  "wb") as f:
             pickle.dump(results, f)
 
 def kneighbors_trainer():
@@ -183,7 +199,85 @@ def kneighbors_trainer():
         with open(ParamDir().output_dir/data_name/(f"tsc_train_kneighbors.pickle"),"wb") as f:
             pickle.dump(results, f)
 
+def rocket_trainer_tuning(data_dir, K_range, kernels_range, note):
+    """The training script.
+    """
+    # for data_dir in tqdm(ParamDir().data_path_list):
+    data_name = str(data_dir).split('/')[-1]
+    res_all = []
+    for K, num_kernels in product(K_range, kernels_range):
+        dataset = ThresholdSegmentDataset(data_dir, ParamData().mobility, ParamData().shuffle)
+        (X_train, y_train), (X_test, y_test) = dataset.load_all_data(ParamData().window_size, ParamData().train_ratio, K)
+
+        # rocket transform
+        transform_pipeline = Pipeline([
+            ("rocket", Rocket(num_kernels, random_state=ParamData().random_state)),
+            ("std_scaler", StandardScaler()),
+            ("l2_norm", Normalizer()),
+        ])
+        X_train = transform_pipeline.fit_transform(X_train)
+        active_features = X_train.sum(axis=0)>0
+        X_train = X_train[:, active_features]
+        X_test = transform_pipeline.transform(X_test)
+        X_test = X_test[:, active_features]
+
+        # normalization
+        if X_train.shape[1]==0: 
+            print(f"with K:{K} & num_kernels:{num_kernels}, found zero features")
+            continue
+
+        # cv tuning
+        kfold = KFold(n_splits=ParamaRocketTrain().n_splits)
+        model = RidgeClassifier(random_state=ParamData().random_state)
+        clf = GridSearchCV(model, 
+                            param_grid={"alpha": ParamaRocketTrain().alphas},
+                            cv=kfold)
+        clf.fit(X_train, y_train)
+
+        # scoring
+        scores = clf.score(X_test, y_test)
+
+        res = {
+            "estimator": clf, 
+            "scores": scores,
+            "K": K,
+            "num_kernels": num_kernels,
+        }
+        res_all.append(res)
+    if not (ParamDir().output_dir/data_name).exists():
+        (ParamDir().output_dir/data_name).mkdir()
+    with open(ParamDir().output_dir/data_name/(f"tsc_tuning_rocket_{note}.pickle"),"wb") as f:
+        pickle.dump(res_all, f)
+
+
 if __name__ == "__main__":
-    rocket_trainer()
-    rocket_trainer_balanced()
+    # rocket_trainer()
+    # rocket_trainer_balanced()
+    rocket_trainer_threshold_segment()
+    # LEM_trainer_threshold_segment()
     # kneighbors_trainer()
+
+    # ---- large scale tuning -----
+    # K_range = [16]
+    # kernels_range = [2**i for i in range(2, 11)]
+    # # # rocket_trainer_tuning(K_range, kernels_range, "large_scale")
+    # Parallel(n_jobs=-1)(delayed(
+    #     rocket_trainer_tuning(data_dir, K_range, kernels_range, "large_scale")
+    #     )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
+
+    # ---- small scale tuning ----
+    # K_range = [16]
+    # kernels_range = range(100, 600, 20)
+    # # rocket_trainer_tuning(K_range, kernels_range, "small_scale")
+    # Parallel(n_jobs=-1)(delayed(
+    #     rocket_trainer_tuning(data_dir, K_range, kernels_range, "small_scale")
+    #     )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
+
+    # ---- small scale tuning 2 ----
+    # K_range = [20]
+    # kernels_range = np.arange(1, 800, 5)
+    # rocket_trainer_tuning(K_range, kernels_range, "small_scale_kernels")
+
+
+
+    

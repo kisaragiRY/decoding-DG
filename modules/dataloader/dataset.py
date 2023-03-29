@@ -72,12 +72,12 @@ class BaseDataset:
         """
         if self.shuffle_method == 'behavior shuffling':
             # --- 1. flip in time
-            self.y = self.y[::-1]
+            self.coords_xy = self.coords_xy[::-1]
             # --- 2. shift a random amount
             random_num = np.random.randint(1, len(self.coords_xy))
-            self.y = np.roll(self.y, random_num)
+            self.coords_xy = np.roll(self.coords_xy, random_num)
         else:
-            for row in self.X:
+            for row in self.spikes:
                 # shuffle the row when there are spikes
                 if np.sum(row) > 0:
                     np.random.shuffle(row)
