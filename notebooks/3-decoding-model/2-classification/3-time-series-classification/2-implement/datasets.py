@@ -163,14 +163,14 @@ class ThresholdSegmentDataset(BaseDataset):
         segment_ind = segment_with_threshold(self.y_test, K) # get the segmentation indices
         X_test_new, self.y_test = get_segment_data(segment_ind, K, window_size, self.X_test, self.y_test)
 
-        # filter the neuron: delete the neurons where the activity is zero across instances
-        neurons_to_use = np.vstack(X_train_new).sum(axis=0)>0
-        self.X_train = np.array([X[:, neurons_to_use ] for X in X_train_new])
-        self.X_test = np.array([X[:, neurons_to_use ] for X in X_test_new])
+        # # filter the neuron: delete the neurons where the activity is zero across instances
+        # neurons_to_use = np.vstack(X_train_new).sum(axis=0)>0
+        # self.X_train = np.array([X[:, neurons_to_use ] for X in X_train_new])
+        # self.X_test = np.array([X[:, neurons_to_use ] for X in X_test_new])
 
         # -- downsample
-        self.X_train, self.y_train = downsample(self.X_train, self.y_train)
-        self.X_test, self.y_test = downsample(self.X_test, self.y_test)
+        self.X_train, self.y_train = downsample(X_train_new, self.y_train)
+        self.X_test, self.y_test = downsample(X_test_new, self.y_test)
 
 
         return (self.X_train, self.y_train), (self.X_test, self.y_test)
