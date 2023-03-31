@@ -7,12 +7,24 @@ from base import BaseTransformer
 
 class Rocket(BaseTransformer):
     """RandOm Convolutional KErnel Transform (ROCKET).
+
+    Parameters
+    ----------
+    num_kernels: int = 100
+        the number of kernels to apply to the data.
+    kernel_dim: int = 1
+        which dimension of kernels to use.
+    random_state = None
+        random state for setting the seed.
     """
     num_kernels: int = 100
+    kernel_dim: int = 1
     random_state = None
 
     def __post_init__(self):
         super().__post_init__()
+        if not self.kernel_dim in [1, 2]:
+            raise ValueError("Only 1 or 2 dimension kernels are available.")
     
     def _fit(self, X: NDArray):
         """Generate random kernels adjusted to time series shape.
@@ -27,10 +39,14 @@ class Rocket(BaseTransformer):
         ----------
         self
         """
-        from _kernels import _generate_kernels
+        from _kernels import _generate_1d_kernels, _generate_nd_kernels
 
         _, self.num_features, self.num_timepoints = X.shape
-        self.kernels = _generate_kernels(self.num_features, self.num_timepoints, self.num_kernels, self.random_state)
+
+        if self.kernel_dim == 1:
+            self.kernels = _generate_1d_kernels(self.num_features, self.num_timepoints, self.num_kernels, self.random_state)
+        else:
+            self.kernels = _generate_nd_kernels(self.num_features, self.num_timepoints, self.num_kernels, self.kernel_dim, self.random_state)
 
         return self
     
@@ -49,7 +65,7 @@ class Rocket(BaseTransformer):
         """
         from _kernels import _apply_kernels
 
-        return _apply_kernels(X, self.kernels)
+        return _apply_kernels(X, self.kernels, self.kernel_dim)
 
 
     
