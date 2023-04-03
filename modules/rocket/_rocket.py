@@ -2,7 +2,7 @@ from numpy.typing import NDArray
 
 from dataclasses import dataclass
 
-from base import BaseTransformer
+from .base import BaseTransformer
 
 
 class Rocket(BaseTransformer):
