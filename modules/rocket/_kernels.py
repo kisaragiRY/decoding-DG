@@ -27,6 +27,13 @@ def _generate_1d_kernels(num_features: int, num_timepoints: int, num_kernels: in
     Return
     ----------
     random 1d kernels.
+        weights: weights for each kernel;
+        length_list: length of each kernel;
+        biases: bias assigned to each kernel;
+        dilations: dilation assigned to each kernel;
+        paddings: padding assigned to each kernel;
+        num_features_list: how many features to use for each kernel;
+        features_indices: the corresponding feature indices for num_features_list.
     """
     if seed is not None:
         np.random.seed(seed)
@@ -119,6 +126,15 @@ def _generate_nd_kernels(num_features: int, num_timepoints: int, num_kernels: in
     Return
     ----------
     random nd kernels.
+        weights: weights for each kernel;
+        length_list: length of each kernel;
+        biases: bias assigned to each kernel;
+        dilations: dilation assigned to each kernel;
+        paddings: padding assigned to each kernel;
+        num_combinations_list: the number of combinations of features to use for 
+                               each kernel;
+        combinations_indices: the corresponding feature indices of one combination 
+                               from num_features_list.
     """
     if seed is not None:
         np.random.seed(seed)
