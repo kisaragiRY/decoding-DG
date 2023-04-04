@@ -9,6 +9,7 @@ class BaseTransformer():
     def __post_init__(self):
         """Post init.
         """
+        self._is_fitted = False
 
     def check_is_fitted(self):
         """Check if the estimator has been fitted.
@@ -17,7 +18,7 @@ class BaseTransformer():
         ValueError
             If the estimator has not been fitted yet.
         """
-        if not self.is_fitted:
+        if not self._is_fitted:
             raise ValueError(
                 f"This instance of {self.__class__.__name__} has not "
                 f"been fitted yet; please call `fit` first."

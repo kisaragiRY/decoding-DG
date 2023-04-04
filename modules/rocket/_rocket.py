@@ -1,10 +1,11 @@
+from typing import Optional
 from numpy.typing import NDArray
 
 from dataclasses import dataclass
 
 from .base import BaseTransformer
 
-
+@dataclass
 class Rocket(BaseTransformer):
     """RandOm Convolutional KErnel Transform (ROCKET).
 
@@ -19,7 +20,7 @@ class Rocket(BaseTransformer):
     """
     num_kernels: int = 100
     kernel_dim: int = 1
-    random_state = None
+    random_state:  Optional[int] = None
 
     def __post_init__(self):
         super().__post_init__()
@@ -39,7 +40,7 @@ class Rocket(BaseTransformer):
         ----------
         self
         """
-        from _kernels import _generate_1d_kernels, _generate_nd_kernels
+        from ._kernels import _generate_1d_kernels, _generate_nd_kernels
 
         _, self.num_features, self.num_timepoints = X.shape
 
@@ -63,7 +64,7 @@ class Rocket(BaseTransformer):
         ----------
         transformed version of the input X.
         """
-        from _kernels import _apply_kernels
+        from ._kernels import _apply_kernels
 
         return _apply_kernels(X, self.kernels, self.kernel_dim)
 

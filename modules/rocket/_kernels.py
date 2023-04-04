@@ -7,6 +7,7 @@ from typing import Tuple, Optional
 from numpy.typing import NDArray
 
 from dataclasses import dataclass
+from numba import njit
 
 import numpy as np
 
@@ -109,6 +110,7 @@ def _generate_1d_kernels(num_features: int, num_timepoints: int, num_kernels: in
         features_indices,
     )
 
+@njit
 def _generate_nd_kernels(num_features: int, num_timepoints: int, num_kernels: int, kernel_dim: int,seed: Optional[int] = None) -> Tuple:
     """Generate random nd kernels.
 
@@ -147,7 +149,7 @@ def _generate_nd_kernels(num_features: int, num_timepoints: int, num_kernels: in
         limit = min(num_features, length_list[i])
         num_combinations_list[i] = 2 ** np.random.uniform(0, np.log2(limit + 1))
 
-    combinations_indices = np.zeros(num_combinations_list.sum(), dtype=np.int32) 
+    combinations_indices = np.zeros((num_combinations_list.sum(), kernel_dim), dtype=np.int32) 
 
     weights = np.zeros(
         np.int32(
@@ -186,9 +188,9 @@ def _generate_nd_kernels(num_features: int, num_timepoints: int, num_kernels: in
 
         weights[s_w:e_w] = _weights
 
-        combinations_indices[s_f:e_f] = np.random.choice(
-            features_combinations, _num_combinations, replace=False
-        )# which features combinations to use per kernel (could overlap)
+        combinations_indices[s_f:e_f] = features_combinations[np.random.choice(
+            len(features_combinations), _num_combinations, replace=False
+        )]# which features combinations to use per kernel (could overlap)
 
         biases[i] = np.random.uniform(-1, 1)
 
@@ -302,6 +304,7 @@ def _apply_nd_kernel(X_ins: NDArray, kernel: Tuple, kernel_dim: int = 2):
 
     return np.float32(_ppv / output_length), np.float32(_max)
 
+@njit
 def _apply_kernels(X: NDArray, kernels: Tuple, kernel_dim: int):
     """Apply the kernels to X.
     """
@@ -341,11 +344,11 @@ def _apply_kernels(X: NDArray, kernels: Tuple, kernel_dim: int):
 
         for j in range(num_kernels):
 
-            e_w = s_w + num_features_list[j] * length_list[j] * kernel_dim # end index of weights
-            e_f = s_f + num_features_list[j] # end index of features to use
             e_out_f = s_out_f + 2 # end index of the features for the output
 
             if kernel_dim == 1:
+                e_w = s_w + num_features_list[j] * length_list[j] * kernel_dim # end index of weights
+                e_f = s_f + num_features_list[j] # end index of features to use
                 _weights = weights[s_w:e_w].reshape((num_features_list[j], length_list[j]))
 
                 kernel = (
@@ -363,6 +366,8 @@ def _apply_kernels(X: NDArray, kernels: Tuple, kernel_dim: int):
                     kernel
                 )
             else:
+                e_w = s_w + num_combinations_list[j] * length_list[j] * kernel_dim # end index of weights
+                e_f = s_f + num_combinations_list[j] # end index of features to use
                 _weights = weights[s_w:e_w].reshape((num_combinations_list[j], length_list[j], kernel_dim))
 
                 kernel = (
