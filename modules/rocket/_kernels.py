@@ -7,10 +7,13 @@ from typing import Tuple, Optional
 from numpy.typing import NDArray
 
 from dataclasses import dataclass
-from numba import njit
-
+from numba import njit, jit, prange
+from itertools import combinations
 import numpy as np
 
+from util import get_random_comb
+
+@njit
 def _generate_1d_kernels(num_features: int, num_timepoints: int, num_kernels: int, seed: Optional[int] = None) -> Tuple:
     """Generate random 1d kernels.
 
@@ -36,14 +39,13 @@ def _generate_1d_kernels(num_features: int, num_timepoints: int, num_kernels: in
         num_features_list: how many features to use for each kernel;
         features_indices: the corresponding feature indices for num_features_list.
     """
-    if seed is not None:
-        np.random.seed(seed)
+    np.random.seed(seed)
     
     candidate_length_list = np.array((7, 9, 11), dtype=np.int32)
     length_list = np.random.choice(candidate_length_list, num_kernels).astype(np.int32)
 
     num_features_list = np.zeros(num_kernels, dtype=np.int32) # how many features to use per kernel
-    for i in range(num_kernels):
+    for i in prange(num_kernels):
         limit = min(num_features, length_list[i])
         num_features_list[i] = 2 ** np.random.uniform(0, np.log2(limit + 1))
 
@@ -62,7 +64,7 @@ def _generate_1d_kernels(num_features: int, num_timepoints: int, num_kernels: in
     s_w = 0  # start index for weights
     s_f = 0  # start index for features
 
-    for i in range(num_kernels):
+    for i in prange(num_kernels):
 
         _length = length_list[i]
         _num_features = num_features_list[i]
@@ -75,7 +77,7 @@ def _generate_1d_kernels(num_features: int, num_timepoints: int, num_kernels: in
         e_f = s_f + _num_features
 
         s_w_per_k = 0  # start index of weight per kernel
-        for _ in range(_num_features):
+        for _ in prange(_num_features):
             e_w_per_k = s_w_per_k + _length
             _weights[s_w_per_k:e_w_per_k] = _weights[s_w_per_k:e_w_per_k] - _weights[s_w_per_k:e_w_per_k].mean()
             s_w_per_k = e_w_per_k
@@ -111,7 +113,7 @@ def _generate_1d_kernels(num_features: int, num_timepoints: int, num_kernels: in
     )
 
 @njit
-def _generate_nd_kernels(num_features: int, num_timepoints: int, num_kernels: int, kernel_dim: int,seed: Optional[int] = None) -> Tuple:
+def _generate_nd_kernels(num_features: int, num_timepoints: int, num_kernels: int, kernel_dim: int, seed: Optional[int] = None) -> Tuple:
     """Generate random nd kernels.
 
     Parameters
@@ -161,14 +163,10 @@ def _generate_nd_kernels(num_features: int, num_timepoints: int, num_kernels: in
     dilations = np.zeros(num_kernels, dtype=np.int32)
     paddings = np.zeros(num_kernels, dtype=np.int32)
 
-    features_combinations = np.array(
-                    np.meshgrid((np.arange(0, num_features), np.arange(0, num_features)))
-                    ).T.reshape(-1, kernel_dim)
-
     s_w = 0  # start index for weights
     s_f = 0  # start index for features
 
-    for i in range(num_kernels):
+    for i in prange(num_kernels):
 
         _length = length_list[i]
         _num_combinations = num_combinations_list[i] # select ramdom number of features
@@ -181,16 +179,16 @@ def _generate_nd_kernels(num_features: int, num_timepoints: int, num_kernels: in
         e_f = s_f + _num_combinations
 
         s_w_per_k = 0  # start index of weight per kernel
-        for _ in range(_num_combinations):
+        for _ in prange(_num_combinations):
             e_w_per_k = s_w_per_k + _length * kernel_dim
             _weights[s_w_per_k:e_w_per_k] = _weights[s_w_per_k:e_w_per_k] - _weights[s_w_per_k:e_w_per_k].mean()
             s_w_per_k = e_w_per_k
 
         weights[s_w:e_w] = _weights
 
-        combinations_indices[s_f:e_f] = features_combinations[np.random.choice(
-            len(features_combinations), _num_combinations, replace=False
-        )]# which features combinations to use per kernel (could overlap)
+        combinations_indices[s_f:e_f] = get_random_comb(
+            np.arange(0, num_features), kernel_dim, _num_combinations, seed
+        )# which features combinations to use per kernel (could overlap)
 
         biases[i] = np.random.uniform(-1, 1)
 
@@ -216,6 +214,7 @@ def _generate_nd_kernels(num_features: int, num_timepoints: int, num_kernels: in
         combinations_indices,
     )
 
+@njit
 def _apply_1d_kernel(X_ins: NDArray, kernel: Tuple):  
     """Apply the kernel to the one instance of X
     """
@@ -237,17 +236,17 @@ def _apply_1d_kernel(X_ins: NDArray, kernel: Tuple):
 
     end = (num_timepoints + padding) - ((kernel_length - 1) * dilation)
 
-    for conv_i in range(-padding, end):
+    for conv_i in prange(-padding, end):
 
         _sum = bias
 
         current_time = conv_i
 
-        for weight_i in range(kernel_length):
+        for weight_i in prange(kernel_length):
 
             if current_time > -1 and current_time < num_timepoints:
 
-                for feature_i in range(num_features_list):
+                for feature_i in prange(num_features_list):
                     _sum += weights[feature_i, weight_i] * X_ins[features_indices[feature_i], current_time]
 
             current_time += dilation
@@ -260,6 +259,7 @@ def _apply_1d_kernel(X_ins: NDArray, kernel: Tuple):
 
     return np.float32(_ppv / output_length), np.float32(_max)
 
+@njit#(parallel=True)
 def _apply_nd_kernel(X_ins: NDArray, kernel: Tuple, kernel_dim: int = 2):  
     """Apply the kernel to the one instance of X
     """
@@ -281,17 +281,17 @@ def _apply_nd_kernel(X_ins: NDArray, kernel: Tuple, kernel_dim: int = 2):
 
     end = (num_timepoints + padding) - ((kernel_length - 1) * dilation)
 
-    for conv_i in range(-padding, end):
+    for conv_i in prange(-padding, end):
 
         _sum = bias
 
         current_time = conv_i
 
-        for weight_i in range(kernel_length):
+        for weight_i in prange(kernel_length):
             if current_time > -1 and current_time < num_timepoints:
-                for combination_i in range(num_combinations):
+                for combination_i in prange(num_combinations):
                     combinations = combinations_indices[combination_i]
-                    for feature_i in range(len(combinations)):
+                    for feature_i in prange(len(combinations)):
                         _sum += weights[combination_i, weight_i, feature_i] * X_ins[combinations[feature_i], current_time]
 
             current_time += dilation
@@ -304,30 +304,19 @@ def _apply_nd_kernel(X_ins: NDArray, kernel: Tuple, kernel_dim: int = 2):
 
     return np.float32(_ppv / output_length), np.float32(_max)
 
-@njit
-def _apply_kernels(X: NDArray, kernels: Tuple, kernel_dim: int):
+@njit(parallel=True,fastmath=True,cache=True)
+def _apply_1d_kernels(X: NDArray, kernels: Tuple):
     """Apply the kernels to X.
     """
-    if kernel_dim == 1:
-        (
-            weights,
-            length_list,
-            biases,
-            dilations,
-            paddings,
-            num_features_list,
-            features_indices,
-        ) = kernels
-    else:
-        (
-            weights,
-            length_list,
-            biases,
-            dilations,
-            paddings,
-            num_combinations_list,
-            combinations_indices,
-        ) = kernels
+    (
+        weights,
+        length_list,
+        biases,
+        dilations,
+        paddings,
+        num_features_list,
+        features_indices,
+    ) = kernels
 
     n_instances, _, _ = X.shape
     num_kernels = len(length_list)
@@ -336,54 +325,91 @@ def _apply_kernels(X: NDArray, kernels: Tuple, kernel_dim: int):
         (n_instances, num_kernels * 2), dtype=np.float32
     )  # 2 features per kernel
 
-    for i in range(n_instances):
+    for i in prange(n_instances):
 
         s_w = 0  # start index of weights
         s_f = 0  # start index of features from the orginal data to use
         s_out_f = 0  # start index of the features for the output
 
-        for j in range(num_kernels):
+        for j in prange(num_kernels):
+
+            e_out_f = s_out_f + 2 # end index of the features for the output
+            e_w = s_w + num_features_list[j] * length_list[j] # end index of weights
+            e_f = s_f + num_features_list[j] # end index of features to use
+
+            _weights = weights[s_w:e_w].reshape((num_features_list[j], length_list[j]))
+
+            kernel = (
+                    _weights,
+                    length_list[j],
+                    biases[j],
+                    dilations[j],
+                    paddings[j],
+                    num_features_list[j],
+                    features_indices[s_f:e_f]
+                    )
+        
+            _X[i, s_out_f:e_out_f] = _apply_1d_kernel(
+                X[i],
+                kernel
+            )
+            
+            s_w = e_w
+            s_f = e_f
+            s_out_f = e_out_f
+
+    return _X.astype(np.float32)
+
+@njit(parallel=True,fastmath=True,cache=True)
+def _apply_nd_kernels(X: NDArray, kernels: Tuple, kernel_dim: int):
+    """Apply the nd kernels to X.
+    """
+    kernel_dim = np.int32(kernel_dim)
+    (
+        weights,
+        length_list,
+        biases,
+        dilations,
+        paddings,
+        num_combinations_list,
+        combinations_indices,
+    ) = kernels
+
+    n_instances, _, _ = X.shape
+    num_kernels = len(length_list)
+
+    _X = np.zeros(
+        (n_instances, num_kernels * 2), dtype=np.float32
+    )  # 2 features per kernel
+
+    for i in prange(n_instances):
+
+        s_w = 0  # start index of weights
+        s_f = 0  # start index of features from the orginal data to use
+        s_out_f = 0  # start index of the features for the output
+
+        for j in prange(num_kernels):
 
             e_out_f = s_out_f + 2 # end index of the features for the output
 
-            if kernel_dim == 1:
-                e_w = s_w + num_features_list[j] * length_list[j] * kernel_dim # end index of weights
-                e_f = s_f + num_features_list[j] # end index of features to use
-                _weights = weights[s_w:e_w].reshape((num_features_list[j], length_list[j]))
+            e_w = s_w + num_combinations_list[j] * length_list[j] * kernel_dim # end index of weights
+            e_f = s_f + num_combinations_list[j] # end index of features to use
+            _weights = weights[s_w:e_w].reshape((num_combinations_list[j], length_list[j], kernel_dim))
 
-                kernel = (
-                        _weights,
-                        length_list[j],
-                        biases[j],
-                        dilations[j],
-                        paddings[j],
-                        num_features_list[j],
-                        features_indices[s_f:e_f]
-                        )
-            
-                _X[i, s_out_f:e_out_f] = _apply_1d_kernel(
-                    X[i],
-                    kernel
-                )
-            else:
-                e_w = s_w + num_combinations_list[j] * length_list[j] * kernel_dim # end index of weights
-                e_f = s_f + num_combinations_list[j] # end index of features to use
-                _weights = weights[s_w:e_w].reshape((num_combinations_list[j], length_list[j], kernel_dim))
-
-                kernel = (
-                        _weights,
-                        length_list[j],
-                        biases[j],
-                        dilations[j],
-                        paddings[j],
-                        num_combinations_list[j],
-                        combinations_indices[s_f:e_f]
-                        )
-                _X[i, s_out_f:e_out_f] = _apply_nd_kernel(
-                    X[i],
-                    kernel,
-                    kernel_dim
-                )
+            kernel = (
+                    _weights,
+                    length_list[j],
+                    biases[j],
+                    dilations[j],
+                    paddings[j],
+                    num_combinations_list[j],
+                    combinations_indices[s_f:e_f]
+                    )
+            _X[i, s_out_f:e_out_f] = _apply_nd_kernel(
+                X[i],
+                kernel,
+                kernel_dim
+            )
 
             s_w = e_w
             s_f = e_f
