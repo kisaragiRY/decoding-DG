@@ -125,15 +125,15 @@ def rocket_trainer_tuning(data_dir, K_range, kernels_range, note):
 
 
 if __name__ == "__main__":
-    modified_rocket_trainer()
+    # modified_rocket_trainer()
 
     # ---- large scale tuning -----
-    # K_range = [16]
-    # kernels_range = [2**i for i in range(2, 13)]
-    # # # rocket_trainer_tuning(K_range, kernels_range, "large_scale")
-    # Parallel(n_jobs=-1)(delayed(
-    #     rocket_trainer_tuning(data_dir, K_range, kernels_range, "large_scale")
-    #     )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
+    K_range = range(10, 22)
+    kernels_range = [2**i for i in range(2, 13)]
+    # # rocket_trainer_tuning(K_range, kernels_range, "large_scale")
+    Parallel(n_jobs=-1)(delayed(
+        rocket_trainer_tuning(data_dir, K_range, kernels_range, "large_scale")
+        )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
 
     # ---- small scale tuning ----
     # K_range = [16]
