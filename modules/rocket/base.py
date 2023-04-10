@@ -43,7 +43,7 @@ class BaseTransformer():
         self._is_fitted = True
         return self
     
-    def transform(self, X: NDArray):
+    def transform(self, X: NDArray, y=None):
         """Transform X and return a transformed version.
 
         Parameters
@@ -61,7 +61,7 @@ class BaseTransformer():
 
         return self._transform(X)
     
-    def fit_transform(self, X: NDArray):
+    def fit_transform(self, X: NDArray, y=None):
         """Fit to data, then transform it.
 
         Parameters
@@ -78,7 +78,7 @@ class BaseTransformer():
         return self.fit(X).transform(X)
 
 
-    def _fit(self, X: NDArray):
+    def _fit(self, X: NDArray, y=None):
         """Fit transformer to X.
 
         Parameters
@@ -94,7 +94,7 @@ class BaseTransformer():
             a fitted instance.
         """
 
-    def _transform(self, X: NDArray):
+    def _transform(self, X: NDArray, y=None):
         """Transform X and return a transformed version.
 
         Parameters
