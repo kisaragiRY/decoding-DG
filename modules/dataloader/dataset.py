@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from util import gauss1d, cal_velocity, bin_pos
+from util import gauss1d, cal_velocity, bin_pos, segment_with_threshold, get_segment_data, downsample
 
 def _is_valid_axis(coord_axis: str) -> bool:
     """Check whether the axis is valid.
@@ -294,3 +294,51 @@ class SummedSpikesDataset(BaseDataset):
         design_mat_all_offset = np.hstack((np.ones((len(design_m),1)), design_m))
 
         return design_mat_all_offset, self.coord[nthist:]
+
+@dataclass
+class UniformSegmentDataset(BaseDataset):
+    """A balanced dataset where segmenting is based on a given threshold so that
+    each segment is with the same length.
+    """
+    def __post_init__(self):
+        super().__post_init__()
+        self.y = self._discretize_coords()
+        self.X = self.spikes
+    
+    def load_all_data(self, window_size : int, train_ratio: float, K: int) -> Tuple:
+        """Load design matrix and corresponding response(coordinate).
+        
+        Parameter
+        ------------
+        window_size : int
+            smoothing window size.
+        K: int
+            segment length threshold.
+        """
+        # --- split data 
+        (self.X_train, self.y_train), (self.X_test, self.y_test) = self.split_data(self.X, self.y, train_ratio)
+
+        # --- remove inactive neurons
+        active_neurons = self.X_train.sum(axis=0)>0
+        self.X_train = self.X_train[:, active_neurons]
+        self.X_test = self.X_test[:, active_neurons]
+        
+        # --- segment data while smoothing
+        # train set
+        segment_ind = segment_with_threshold(self.y_train, K) # get the segmentation indices
+        X_train_new, self.y_train = get_segment_data(segment_ind, K, window_size, self.X_train, self.y_train)
+        # test set
+        segment_ind = segment_with_threshold(self.y_test, K) # get the segmentation indices
+        X_test_new, self.y_test = get_segment_data(segment_ind, K, window_size, self.X_test, self.y_test)
+
+        # # filter the neuron: delete the neurons where the activity is zero across instances
+        # neurons_to_use = np.vstack(X_train_new).sum(axis=0)>0
+        # self.X_train = np.array([X[:, neurons_to_use ] for X in X_train_new])
+        # self.X_test = np.array([X[:, neurons_to_use ] for X in X_test_new])
+
+        # -- downsample
+        self.X_train, self.y_train = downsample(X_train_new, self.y_train)
+        self.X_test, self.y_test = downsample(X_test_new, self.y_test)
+
+
+        return (self.X_train, self.y_train), (self.X_test, self.y_test)
