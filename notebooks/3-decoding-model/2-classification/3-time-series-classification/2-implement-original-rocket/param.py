@@ -44,3 +44,4 @@ class ParamaRocketTrain:
     n_splits : int = 10 # for cross validation
     alphas: NDArray = np.logspace(-3, 3, 10)
     Cs: NDArray = np.logspace(-3, 3, 10)
+    njobs: int = 30
