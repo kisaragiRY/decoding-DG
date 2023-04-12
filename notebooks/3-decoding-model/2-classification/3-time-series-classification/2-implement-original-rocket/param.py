@@ -30,9 +30,9 @@ class ParamData:
     train_ratio: float = .8
     mobility : float = 1.0
     K : int = 16 # the threshold for the length of segments
-    shuffle =  "events shuffling" # there are two methods: behavior shuffling and events shuffling
+    shuffle =  False # there are two methods: behavior shuffling and events shuffling
     reduction_method: str = "LEM"
-    random_state : int = 20130315
+    random_state : int = 20230411
     num_kernels_KO: int = 250
     num_kernels_WT: int = 300
 
@@ -40,8 +40,8 @@ class ParamData:
 class ParamaRocketTrain:
     """Param for training.
     """
-    model_name : str = "SVM" # "Ridge", "SVM", "Softmax", 
-    n_splits : int = 10 # for cross validation
+    model_name : str = "Ridge" # "Ridge", "SVM", "Softmax", 
+    n_splits : int = 5 # for cross validation
     alphas: NDArray = np.logspace(-3, 3, 10)
     Cs: NDArray = np.logspace(-3, 3, 10)
     njobs: int = 30
