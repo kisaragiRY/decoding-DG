@@ -71,7 +71,7 @@ class BaseDataset:
         Based on two methods:'behavior shuffling' and 'events shuffling'.
         Details see method in reference: https://pubmed.ncbi.nlm.nih.gov/32521223/
         """
-        if not self.randome_state:
+        if self.randome_state:
             np.random.seed(self.randome_state)
         if self.shuffle_method == 'behavior shuffling':
             # --- 1. flip in time
@@ -340,8 +340,8 @@ class UniformSegmentDataset(BaseDataset):
         # self.X_test = np.array([X[:, neurons_to_use ] for X in X_test_new])
 
         # -- downsample
-        self.X_train, self.y_train = downsample(X_train_new, self.y_train)
-        self.X_test, self.y_test = downsample(X_test_new, self.y_test)
+        self.X_train, self.y_train = downsample(X_train_new, self.y_train, self.randome_state)
+        self.X_test, self.y_test = downsample(X_test_new, self.y_test, self.randome_state)
 
 
         return (self.X_train, self.y_train), (self.X_test, self.y_test)
