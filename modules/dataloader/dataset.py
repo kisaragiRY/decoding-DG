@@ -1,5 +1,5 @@
 from numpy.typing import NDArray
-from typing import Tuple, Union
+from typing import Tuple, Optional
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,16 +25,17 @@ class BaseDataset:
     ---------
     datadir : Path
         the path to a mouse's data
-    mobility : Union[bool, float]
+    mobility : Optional[float]
         whethe to only use the data when the mouse is moving.
         if given, must specify the threshold for identifying immobility.
-    shuffle_method : Union[bool, str]
+    shuffle_method : Optional[str]
         whether to shuffle the data, and if does, specify the method.
         the value can be either False, 'behavior shuffling' or 'events shuffling'.
     """
     data_dir : Path
-    mobility : Union[bool, float]
-    shuffle_method : Union[bool, str]
+    mobility : Optional[float]
+    shuffle_method : Optional[str]
+    randome_state: Optional[int]
 
     def __post_init__(self) -> None:
         """Post precessing."""
@@ -70,6 +71,8 @@ class BaseDataset:
         Based on two methods:'behavior shuffling' and 'events shuffling'.
         Details see method in reference: https://pubmed.ncbi.nlm.nih.gov/32521223/
         """
+        if not self.randome_state:
+            np.random.seed(self.randome_state)
         if self.shuffle_method == 'behavior shuffling':
             # --- 1. flip in time
             self.coords_xy = self.coords_xy[::-1]
