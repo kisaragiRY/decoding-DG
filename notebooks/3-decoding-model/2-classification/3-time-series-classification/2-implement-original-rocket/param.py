@@ -26,11 +26,11 @@ class ParamDir:
 class ParamData:
     """Param for dataset.
     """
-    window_size = 8
+    window_size: int = 8
     train_ratio: float = .8
     mobility : float = 1.0
     K : int = 16 # the threshold for the length of segments
-    shuffle =  False # there are two methods: behavior shuffling and events shuffling
+    shuffle: bool =  False # there are two methods: behavior shuffling and events shuffling
     reduction_method: str = "LEM"
     random_state : int = 20230411
     num_kernels_KO: int = 250
