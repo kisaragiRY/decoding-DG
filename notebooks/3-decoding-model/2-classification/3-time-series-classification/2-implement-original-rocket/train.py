@@ -139,11 +139,18 @@ def rocket_trainer_tuning(data_dir, K_range, kernels_range, note):
 
         # cv tuning
         kfold = KFold(n_splits=ParamaRocketTrain().n_splits)
-        model = RidgeClassifier(random_state=ParamData().random_state)
+        # model = RidgeClassifier(random_state=ParamData().random_state)
+        # clf = GridSearchCV(model, 
+        #                     param_grid={"alpha": ParamaRocketTrain().alphas},
+        #                     cv=kfold,
+        #                     n_jobs=ParamaRocketTrain().njobs)
+
+        model = SVC()
         clf = GridSearchCV(model, 
-                            param_grid={"alpha": ParamaRocketTrain().alphas},
-                            cv=kfold,
-                            n_jobs=ParamaRocketTrain().njobs)
+                            param_grid={"C": ParamaRocketTrain().Cs,
+                                        "kernel": ["rbf", "sigmoid"]},
+                            cv=kfold)
+
         clf.fit(X_train, y_train)
 
         # scoring
@@ -167,20 +174,28 @@ if __name__ == "__main__":
     # LEM_trainer_threshold_segment()
 
     # ---- large scale tuning -----
-    K_range = range(10, 22)
-    kernels_range = [2**i for i in range(2, 13)]
-    # # rocket_trainer_tuning(K_range, kernels_range, "large_scale")
-    Parallel(n_jobs=ParamaRocketTrain().njobs)(delayed(
-        rocket_trainer_tuning(data_dir, K_range, kernels_range, "large_scale")
-        )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
+    # K_range = range(10, 22)
+    # kernels_range = [2**i for i in range(2, 13)]
+    # # # rocket_trainer_tuning(K_range, kernels_range, "large_scale")
+    # Parallel(n_jobs=ParamaRocketTrain().njobs)(delayed(
+    #     rocket_trainer_tuning(data_dir, K_range, kernels_range, "large_scale")
+    #     )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
+
+    # ---- SVM: large scale tuning -----
+    # K_range = range(10, 22)
+    # kernels_range = [2**i for i in range(2, 13)]
+    # # # rocket_trainer_tuning(K_range, kernels_range, "large_scale")
+    # Parallel(n_jobs=ParamaRocketTrain().njobs)(delayed(
+    #     rocket_trainer_tuning(data_dir, K_range, kernels_range, "SVM_large_scale")
+    #     )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
 
     # ---- small scale tuning ----
-    # K_range = [16]
-    # kernels_range = range(100, 600, 20)
-    # # rocket_trainer_tuning(K_range, kernels_range, "small_scale")
-    # Parallel(n_jobs=-1)(delayed(
-    #     rocket_trainer_tuning(data_dir, K_range, kernels_range, "small_scale")
-    #     )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
+    K_range = [16]
+    kernels_range = range(500, 2000, 50)
+    # rocket_trainer_tuning(K_range, kernels_range, "small_scale")
+    Parallel(n_jobs=-1)(delayed(
+        rocket_trainer_tuning(data_dir, K_range, kernels_range, "small_scale")
+        )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
 
     # ---- small scale tuning 2 ----
     # K_range = [20]
