@@ -4,22 +4,17 @@ from joblib import Parallel, delayed
 import pandas as pd
 from tqdm import tqdm
 import pickle
-from sktime.transformations.panel.rocket import Rocket, MiniRocketMultivariate
-from sktime.classification.kernel_based import RocketClassifier
-from sktime.classification.distance_based import KNeighborsTimeSeriesClassifier
+from sktime.transformations.panel.rocket import Rocket
 from sklearn.preprocessing import Normalizer, StandardScaler
-from sklearn.model_selection import GridSearchCV, TimeSeriesSplit, cross_val_score, KFold
+from sklearn.model_selection import GridSearchCV, cross_val_score, KFold
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import RidgeClassifier, LogisticRegression
-from sklearn.cluster import KMeans
 from sklearn.svm import SVC
-from sklearn.manifold import Isomap
 from itertools import product
 
 from dataloader.dataset import UniformSegmentDataset
 from datasets import *
 from param import *
-from util import segment, downsample
 
 def rocket_trainer_threshold_segment():
     """The training script.
@@ -27,7 +22,7 @@ def rocket_trainer_threshold_segment():
     for data_dir in tqdm(ParamDir().data_path_list):
         data_name = str(data_dir).split('/')[-1]
 
-        dataset = UniformSegmentDataset(data_dir, ParamData().mobility, ParamData().shuffle)
+        dataset = UniformSegmentDataset(data_dir, ParamData().mobility, ParamData().shuffle, ParamData().random_state)
         (X_train, y_train), (X_test, y_test) = dataset.load_all_data(ParamData().window_size, ParamData().train_ratio, ParamData().K)
 
         # rocket transform
@@ -123,7 +118,7 @@ def rocket_trainer_tuning(data_dir, K_range, kernels_range, note):
     data_name = str(data_dir).split('/')[-1]
     res_all = []
     for K, num_kernels in product(K_range, kernels_range):
-        dataset = UniformSegmentDataset(data_dir, ParamData().mobility, ParamData().shuffle)
+        dataset = UniformSegmentDataset(data_dir, ParamData().mobility, ParamData().shuffle, ParamData().random_state)
         (X_train, y_train), (X_test, y_test) = dataset.load_all_data(ParamData().window_size, ParamData().train_ratio, K)
 
         # rocket transform
@@ -138,7 +133,6 @@ def rocket_trainer_tuning(data_dir, K_range, kernels_range, note):
         X_test = transform_pipeline.transform(X_test)
         X_test = X_test[:, active_features]
 
-        # normalization
         if X_train.shape[1]==0: 
             print(f"with K:{K} & num_kernels:{num_kernels}, found zero features")
             continue
@@ -169,11 +163,8 @@ def rocket_trainer_tuning(data_dir, K_range, kernels_range, note):
 
 
 if __name__ == "__main__":
-    # rocket_trainer()
-    # rocket_trainer_balanced()
     # rocket_trainer_threshold_segment()
     # LEM_trainer_threshold_segment()
-    # kneighbors_trainer()
 
     # ---- large scale tuning -----
     K_range = range(10, 22)
