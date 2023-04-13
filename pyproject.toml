@@ -23,8 +23,6 @@ seaborn = "^0.12.1"
 imblearn = "^0.0"
 sktime = "^0.16.1"
 tslearn = "^0.5.3.2"
-torch = "^1.13.1"
-torchvision = "^0.14.1"
 
 
 [build-system]
