@@ -1,7 +1,6 @@
 docker run --rm -it \
     --name dg-encoder-decoder \
-    -u 202003:1000 \
+    -u $(id -u):$(id -g) \
     -v "$(pwd)":/work \
-    -v /home/$USER/.ssh:/root/.ssh\
-    dg-decoding:py3.8.5 #\
-    # sh -c "groupadd -g $(id -g) dynamix && useradd -m -s /bin/bash -g $(id -g) -u $(id -u) $USER && usermod -a -G sudo $USER && su - $USER"
+    -v /home/$USER/.ssh:/home/developer/.ssh\
+    dg-decoding:py3.8.5 
