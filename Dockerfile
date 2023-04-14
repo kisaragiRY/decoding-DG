@@ -66,6 +66,3 @@ RUN groupadd --gid $USER_GID $USERNAME \
     chmod 0440 /etc/sudoers.d/$USERNAME 
     
 USER $USERNAME
-# set dir with ownership as home (tmp solution)
-# ENV HOME=/home/$USERNAME
-CMD ["/bin/bash"]
