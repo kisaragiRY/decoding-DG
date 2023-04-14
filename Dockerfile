@@ -2,8 +2,7 @@ FROM ubuntu:20.04
 
 SHELL ["/bin/bash", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
-ENV HOME=/home\
-    WORKDIR=/work 
+ENV WORKDIR=/work 
 RUN mkdir -p $WORKDIR
 WORKDIR $WORKDIR
 
@@ -55,3 +54,18 @@ RUN /usr/local/bin/python3.8 -m pip install --upgrade pip \
     && $POETRY_HOME/bin/poetry config virtualenvs.create false \
     && $POETRY_HOME/bin/poetry install --no-root
 
+# Create the user with the same uid and gid as the host server (tmp solution)
+ARG USERNAME=developer
+ARG USER_UID=202003
+ARG USER_GID=1000
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME &&\
+    usermod -aG root $USERNAME &&\
+    apt-get install -y sudo &&\
+    echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME &&\
+    chmod 0440 /etc/sudoers.d/$USERNAME 
+    
+USER $USERNAME
+# set dir with ownership as home (tmp solution)
+# ENV HOME=/home/$USERNAME
+CMD ["/bin/bash"]
