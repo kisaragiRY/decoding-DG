@@ -72,3 +72,8 @@ ENV HOME=/home/$USERNAME
 # setup poetry and python path for the new user
 RUN echo 'export PYTHONPATH="$WORKDIR:$WORKDIR/modules:$PYTHONPATH"' >> $HOME/.bashrc && \
     echo 'export PATH="$POETRY_HOME/bin:$PATH"' >> $HOME/.bashrc
+
+# for jupyter env
+RUN ipython profile create &&\
+    echo "c.InteractiveShellApp.exec_lines = ['import sys; sys.path+=[\"${WORKDIR}\",\"${WORKDIR}/modules\"]']" \
+    >> $HOME/.ipython/profile_default/ipython_config.py
