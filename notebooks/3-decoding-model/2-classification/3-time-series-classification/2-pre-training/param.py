@@ -9,7 +9,7 @@ import numpy as np
 class ParamDir:
     """Param for directory."""
     ROOT : Path = Path("/work")
-    DATA_ROOT : Path = ROOT/Path('data/alldata/')
+    DATA_ROOT : Path = ROOT/Path('data/processed')
     OUTPUT_ROOT : Path = ROOT/Path("data/interim")
 
     def __post_init__(self) -> None:
