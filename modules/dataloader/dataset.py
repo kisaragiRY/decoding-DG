@@ -1,5 +1,5 @@
 from numpy.typing import NDArray
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Union
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -33,9 +33,9 @@ class BaseDataset:
         the value can be either False, 'behavior shuffling' or 'events shuffling'.
     """
     data_dir : Path
-    mobility : Optional[float]
-    shuffle_method : Optional[str]
-    randome_state: Optional[int]
+    mobility : Union[float, bool]
+    shuffle_method : Union[str, bool]
+    random_state: Union[int, bool] 
 
     def __post_init__(self) -> None:
         """Post precessing."""
@@ -71,8 +71,8 @@ class BaseDataset:
         Based on two methods:'behavior shuffling' and 'events shuffling'.
         Details see method in reference: https://pubmed.ncbi.nlm.nih.gov/32521223/
         """
-        if self.randome_state:
-            np.random.seed(self.randome_state)
+        if self.random_state:
+            np.random.seed(self.random_state)
         if self.shuffle_method == 'behavior shuffling':
             # --- 1. flip in time
             self.coords_xy = self.coords_xy[::-1]
@@ -342,8 +342,8 @@ class UniformSegmentDataset(BaseDataset):
             X_test_new, self.y_test = self._get_segment_data((self.X_test, self.y_test), window_size, K)
 
             # -- downsample
-            self.X_train, self.y_train = downsample(X_train_new, self.y_train, self.randome_state)
-            self.X_test, self.y_test = downsample(X_test_new, self.y_test, self.randome_state)
+            self.X_train, self.y_train = downsample(X_train_new, self.y_train, self.random_state)
+            self.X_test, self.y_test = downsample(X_test_new, self.y_test, self.random_state)
 
             return (self.X_train, self.y_train), (self.X_test, self.y_test)
 
@@ -358,6 +358,6 @@ class UniformSegmentDataset(BaseDataset):
             X_train_new, self.y_train = self._get_segment_data((self.X_train, self.y_train), window_size, K)
 
             # -- downsample
-            self.X_train, self.y_train = downsample(X_train_new, self.y_train, self.randome_state)
+            self.X_train, self.y_train = downsample(X_train_new, self.y_train, self.random_state)
 
             return self.X_train, self.y_train
