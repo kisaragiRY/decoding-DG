@@ -28,12 +28,12 @@ class ParamData:
     window_size = 8
     mobility : float = 1.0
     shuffle =  False # there are two methods: behavior shuffling and events shuffling
-    random_state : Union[int, bool] = 20230417
+    random_state : Union[int, bool] = 202304
 
 @dataclass
 class ParamTrain:
     """Param for training.
     """
-    n_splits : int = 10 # for cross validation
-    n_clusters : int =4
-    random_state : Union[int, bool] = 20230417
+    model_name : str = "k_means" # available options: "k_means", "spectral"
+    n_clusters : int = 4
+    random_state : Union[int, bool] = 202304

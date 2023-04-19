@@ -1,4 +1,4 @@
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, SpectralClustering
 from sklearn.model_selection import GridSearchCV, KFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import Normalizer, StandardScaler
@@ -35,10 +35,14 @@ def rocket_trainer_tuning(data_dir, K_range, kernels_range, note):
         if X_train.shape[1]==0: 
             print(f"with K:{K} & num_kernels:{num_kernels}, found zero features")
             continue
-
-        # K means training
-        model = KMeans(n_clusters=ParamTrain().n_splits, 
-                       random_state=ParamTrain().random_state)
+        
+        if ParamTrain().model_name == "spectral":
+            model = SpectralClustering(n_clusters=ParamTrain().n_clusters,
+                                       random_state=ParamTrain().random_state)
+        elif ParamTrain().model_name == "k_means":
+            # K means training
+            model = KMeans(n_clusters=ParamTrain().n_clusters, 
+                        random_state=ParamTrain().random_state)
         model.fit(X_train, y_train)
 
 
@@ -51,7 +55,7 @@ def rocket_trainer_tuning(data_dir, K_range, kernels_range, note):
         res_all.append(res)
     if not (ParamDir().output_dir/data_name).exists():
         (ParamDir().output_dir/data_name).mkdir()
-    with open(ParamDir().output_dir/data_name/(f"tsc_tuning_k_means_{note}.pickle"),"wb") as f:
+    with open(ParamDir().output_dir/data_name/(f"tsc_tuning_{ParamTrain().model_name}_{note}.pickle"),"wb") as f:
         pickle.dump(res_all, f)
 
 if __name__ == "__main__":
