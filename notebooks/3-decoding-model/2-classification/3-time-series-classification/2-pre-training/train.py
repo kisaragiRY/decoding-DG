@@ -38,6 +38,7 @@ def rocket_trainer_tuning(data_dir, K_range, kernels_range, note):
         
         if ParamTrain().model_name == "spectral":
             model = SpectralClustering(n_clusters=ParamTrain().n_clusters,
+                                       assign_labels=ParamTrain().assign_labels,
                                        random_state=ParamTrain().random_state)
         elif ParamTrain().model_name == "k_means":
             # K means training
