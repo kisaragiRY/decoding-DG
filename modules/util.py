@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Optional
 from numpy.typing import NDArray
 
 import numpy as np
@@ -152,7 +152,7 @@ def softmax(x: NDArray) -> NDArray:
         out[i] /= np.sum(out[i])
     return out
 
-def downsample(X: NDArray, y: NDArray) -> Tuple:
+def downsample(X: NDArray, y: NDArray, random_state: Optional[int]) -> Tuple:
     """Downsample X and y based on the minor class in y.
     
     Randomly select the samples in major classes in y and X accordingly.
@@ -163,7 +163,7 @@ def downsample(X: NDArray, y: NDArray) -> Tuple:
     X_new = X[y==classes[np.argmin(counts)]]
     y_new = y[y==classes[np.argmin(counts)]]
     for c in classes_resample:
-        X_tmp, y_tmp = resample(X[y==c], y[y==c], n_samples=count_min)
+        X_tmp, y_tmp = resample(X[y==c], y[y==c], n_samples=count_min, random_state=random_state)
         X_new = np.vstack((X_new, X_tmp))
         y_new = np.append(y_new, y_tmp)
     return X_new, y_new
