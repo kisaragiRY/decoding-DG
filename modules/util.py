@@ -4,6 +4,7 @@ from numpy.typing import NDArray
 import numpy as np
 from numpy.linalg import det, inv
 from sklearn.utils import resample
+from itertools import combinations
 
 
 def gauss1d(xx: NDArray, mu: float = 0, sigma: float = .2):
@@ -244,4 +245,30 @@ def get_segment_data(segment_ind: NDArray, K: int, window_size: int, X: NDArray,
         X_seg_smoothed.append(np.vstack((X_int, np.zeros((K - len(X_int), n_neurons)))).T) # set to equal length with zeros
     return np.array(X_seg_smoothed), np.array(y_seg)
 
+def cal_inter_clusters_distance(cluster_centers: NDArray) -> float:
+    """Calculate the mean Euclidean distance between clusters.
 
+    Parameters:
+    ----------
+    cluster_centers: NDArray
+        The center of the clusters.
+    """
+    n_clusters = cluster_centers.shape[0]
+    distance_clusters = np.zeros(6)
+    for combo_id, combo in enumerate(combinations(range(n_clusters), 2)):
+        p, q = cluster_centers[[combo]].reshape(2,-1)
+        distance_clusters[combo_id] = np.linalg.norm(p-q)
+    return np.median(distance_clusters)
+
+def cal_within_clusters_distance(inertia: NDArray, X_shape: tuple) -> float:
+    """Calculate the mean Euclidean distance within clusters.
+
+    Parameters:
+    ----------
+    inertia: 
+        Sum of squared distances of samples to their closest cluster center.
+    X_shape: tuple
+        The dimensions of trainging data.
+    """
+    n_instance = X_shape[0]
+    return inertia/n_instance
