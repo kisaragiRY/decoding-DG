@@ -1,5 +1,5 @@
 from numpy.typing import NDArray
-from typing import Tuple, Union
+from typing import Tuple, Optional, Union
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,16 +25,17 @@ class BaseDataset:
     ---------
     datadir : Path
         the path to a mouse's data
-    mobility : Union[bool, float]
+    mobility : Optional[float]
         whethe to only use the data when the mouse is moving.
         if given, must specify the threshold for identifying immobility.
-    shuffle_method : Union[bool, str]
+    shuffle_method : Optional[str]
         whether to shuffle the data, and if does, specify the method.
         the value can be either False, 'behavior shuffling' or 'events shuffling'.
     """
     data_dir : Path
-    mobility : Union[bool, float]
-    shuffle_method : Union[bool, str]
+    mobility : Union[float, bool]
+    shuffle_method : Union[str, bool]
+    random_state: Union[int, bool] 
 
     def __post_init__(self) -> None:
         """Post precessing."""
@@ -70,6 +71,9 @@ class BaseDataset:
         Based on two methods:'behavior shuffling' and 'events shuffling'.
         Details see method in reference: https://pubmed.ncbi.nlm.nih.gov/32521223/
         """
+        if self.random_state:
+            np.random.seed(self.random_state)
+            
         if self.shuffle_method == 'behavior shuffling':
             # --- 1. flip in time
             self.coords_xy = self.coords_xy[::-1]
@@ -305,8 +309,16 @@ class UniformSegmentDataset(BaseDataset):
         self.y = self._discretize_coords()
         self.X = self.spikes
     
-    def load_all_data(self, window_size : int, train_ratio: float, K: int) -> Tuple:
-        """Load design matrix and corresponding response(coordinate).
+    def _get_segment_data(self, data: Tuple[NDArray, NDArray],window_size: int, K: int):
+        """Get segmented data.
+        """
+        X, y = data
+        segment_ind = segment_with_threshold(y, K) # get the segmentation indices
+        X_new, y_new = get_segment_data(segment_ind, K, window_size, X, y)
+        return X_new, y_new
+    
+    def load_all_data(self, window_size : int, K: int, train_ratio: Optional[float] = None) -> Tuple:
+        """Load train and test set if train_ratio is set.
         
         Parameter
         ------------
@@ -314,31 +326,39 @@ class UniformSegmentDataset(BaseDataset):
             smoothing window size.
         K: int
             segment length threshold.
+        train_ratio : Optional[float] = None
+            the training set ration, in the range of 0 and 1.
         """
-        # --- split data 
-        (self.X_train, self.y_train), (self.X_test, self.y_test) = self.split_data(self.X, self.y, train_ratio)
+        if train_ratio:
+            # --- split data 
+            (self.X_train, self.y_train), (self.X_test, self.y_test) = self.split_data(self.X, self.y, train_ratio)
 
-        # --- remove inactive neurons
-        active_neurons = self.X_train.sum(axis=0)>0
-        self.X_train = self.X_train[:, active_neurons]
-        self.X_test = self.X_test[:, active_neurons]
-        
-        # --- segment data while smoothing
-        # train set
-        segment_ind = segment_with_threshold(self.y_train, K) # get the segmentation indices
-        X_train_new, self.y_train = get_segment_data(segment_ind, K, window_size, self.X_train, self.y_train)
-        # test set
-        segment_ind = segment_with_threshold(self.y_test, K) # get the segmentation indices
-        X_test_new, self.y_test = get_segment_data(segment_ind, K, window_size, self.X_test, self.y_test)
+            # --- remove inactive neurons
+            active_neurons = self.X_train.sum(axis=0)>0
+            self.X_train = self.X_train[:, active_neurons]
+            self.X_test = self.X_test[:, active_neurons]
 
-        # # filter the neuron: delete the neurons where the activity is zero across instances
-        # neurons_to_use = np.vstack(X_train_new).sum(axis=0)>0
-        # self.X_train = np.array([X[:, neurons_to_use ] for X in X_train_new])
-        # self.X_test = np.array([X[:, neurons_to_use ] for X in X_test_new])
+            # --- segment data while smoothing
+            X_train_new, self.y_train = self._get_segment_data((self.X_train, self.y_train), window_size, K)
+            X_test_new, self.y_test = self._get_segment_data((self.X_test, self.y_test), window_size, K)
 
-        # -- downsample
-        self.X_train, self.y_train = downsample(X_train_new, self.y_train)
-        self.X_test, self.y_test = downsample(X_test_new, self.y_test)
+            # -- downsample
+            self.X_train, self.y_train = downsample(X_train_new, self.y_train, self.random_state)
+            self.X_test, self.y_test = downsample(X_test_new, self.y_test, self.random_state)
 
+            return (self.X_train, self.y_train), (self.X_test, self.y_test)
 
-        return (self.X_train, self.y_train), (self.X_test, self.y_test)
+        else:
+            self.X_train, self.y_train = self.X, self.y
+
+            # --- remove inactive neurons
+            active_neurons = self.X_train.sum(axis=0)>0
+            self.X_train = self.X_train[:, active_neurons]
+
+            # --- segment data while smoothing
+            X_train_new, self.y_train = self._get_segment_data((self.X_train, self.y_train), window_size, K)
+
+            # -- downsample
+            self.X_train, self.y_train = downsample(X_train_new, self.y_train, self.random_state)
+
+            return self.X_train, self.y_train

@@ -1,5 +1,6 @@
-docker run -it \
-    --name dg-encoder-decoder\
+docker run --rm -it \
+    --name dg-encoder-decoder \
+    -u $(id -u):$(id -g) \
     -v "$(pwd)":/work \
-    -v /home/zhang-r/.ssh:/root/.ssh\
-    dg-decoding:py3.8.5
+    -v /home/$USER/.ssh:/home/developer/.ssh\
+    dg-decoding:py3.8.5 

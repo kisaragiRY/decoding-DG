@@ -1,5 +1,4 @@
-from typing import List
-from numpy.typing import NDArray
+from typing import Union
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -9,7 +8,7 @@ import numpy as np
 class ParamDir:
     """Param for directory."""
     ROOT : Path = Path("/work")
-    DATA_ROOT : Path = ROOT/Path('data/alldata/')
+    DATA_ROOT : Path = ROOT/Path('data/processed')
     OUTPUT_ROOT : Path = ROOT/Path("data/interim")
 
     def __post_init__(self) -> None:
@@ -24,23 +23,18 @@ class ParamDir:
 
 @dataclass
 class ParamData:
-    """Param for dataset.
+    """Params for dataset.
     """
     window_size = 8
-    train_ratio: float = .8
     mobility : float = 1.0
-    K : int = 16 # the threshold for the length of segments
-    shuffle =  "events shuffling" # there are two methods: behavior shuffling and events shuffling
-    reduction_method: str = "LEM"
-    random_state : int = 20130315
-    num_kernels_KO: int = 250
-    num_kernels_WT: int = 300
+    shuffle =  False # there are two methods: behavior shuffling and events shuffling
+    random_state : Union[int, bool] = 202304
 
 @dataclass
-class ParamaRocketTrain:
+class ParamTrain:
     """Param for training.
     """
-    model_name : str = "SVM" # "Ridge", "SVM", "Softmax", 
-    n_splits : int = 10 # for cross validation
-    alphas: NDArray = np.logspace(-3, 3, 10)
-    Cs: NDArray = np.logspace(-3, 3, 10)
+    model_name : str = "spectral" # available options: "k_means", "spectral"
+    n_clusters : int = 4
+    assign_labels : str = "cluster_qr"
+    random_state : Union[int, bool] = 202304
