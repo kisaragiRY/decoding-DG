@@ -4,6 +4,7 @@ from numpy.typing import NDArray
 import numpy as np
 from numpy.linalg import det, inv
 from sklearn.utils import resample
+from numba import njit, prange
 
 
 def gauss1d(xx: NDArray, mu: float = 0, sigma: float = .2):
@@ -244,4 +245,28 @@ def get_segment_data(segment_ind: NDArray, K: int, window_size: int, X: NDArray,
         X_seg_smoothed.append(np.vstack((X_int, np.zeros((K - len(X_int), n_neurons)))).T) # set to equal length with zeros
     return np.array(X_seg_smoothed), np.array(y_seg)
 
+@njit
+def get_random_comb(array: NDArray, size: int, repeat: int, seed: Optional[int]=None) -> NDArray:
+    """Get random combinations from an array.
 
+    Parameters
+    ----------
+    array: NDArray
+        the input array to sample from.
+    size: int
+        the length of the each resampled array.
+    repeat: int
+        the number of sampling.
+    seed: Optional[int] = None
+        random seed.
+
+    Return
+    ------
+    out: NDArray
+        out out array with the size of (repeat, size)
+    """
+    np.random.seed(seed)
+    out = np.zeros((repeat, size))
+    for i in prange(repeat):
+        out[i] = np.random.choice(array, size, replace=False)
+    return out
