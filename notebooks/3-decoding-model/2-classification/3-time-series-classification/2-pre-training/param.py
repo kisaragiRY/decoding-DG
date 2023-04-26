@@ -34,7 +34,7 @@ class ParamData:
 class ParamTrain:
     """Param for training.
     """
-    model_name : str = "spectral" # available options: "k_means", "spectral"
+    model_name : str = "k_means" # available options: "k_means", "spectral"
     n_clusters : int = 4
     assign_labels : str = "cluster_qr"
     random_state : Union[int, bool] = 202304

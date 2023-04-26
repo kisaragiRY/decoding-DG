@@ -61,17 +61,17 @@ def rocket_trainer_tuning(data_dir, K_range, kernels_range, note):
 
 if __name__ == "__main__":
     # ---- large scale tuning -----
-    K_range = range(10, 22)
-    kernels_range = [2**i for i in range(2, 11)]
-    # # rocket_trainer_tuning(K_range, kernels_range, "large_scale")
-    Parallel(n_jobs=-1)(delayed(
-        rocket_trainer_tuning(data_dir, K_range, kernels_range, "large_scale")
-        )(data_dir) for data_dir in ParamDir().data_path_list)
+    # K_range = range(10, 22)
+    # kernels_range = [2**i for i in range(2, 11)]
+    # # # rocket_trainer_tuning(K_range, kernels_range, "large_scale")
+    # Parallel(n_jobs=-1)(delayed(
+    #     rocket_trainer_tuning(data_dir, K_range, kernels_range, "large_scale")
+    #     )(data_dir) for data_dir in ParamDir().data_path_list)
 
     # ---- small scale tuning ----
-    # K_range = [16]
-    # kernels_range = range(100, 600, 20)
-    # # rocket_trainer_tuning(K_range, kernels_range, "small_scale")
-    # Parallel(n_jobs=-1)(delayed(
-    #     rocket_trainer_tuning(data_dir, K_range, kernels_range, "small_scale")
-    #     )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
+    K_range = [16]
+    kernels_range = range(50, 300, 5)
+    # rocket_trainer_tuning(K_range, kernels_range, "small_scale")
+    Parallel(n_jobs=-1)(delayed(
+        rocket_trainer_tuning(data_dir, K_range, kernels_range, "small_scale")
+        )(data_dir) for data_dir in ParamDir().data_path_list)

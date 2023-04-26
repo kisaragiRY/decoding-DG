@@ -4,6 +4,7 @@ from numpy.typing import NDArray
 import numpy as np
 from numpy.linalg import det, inv
 from sklearn.utils import resample
+from itertools import combinations
 from numba import njit, prange
 
 
@@ -245,6 +246,61 @@ def get_segment_data(segment_ind: NDArray, K: int, window_size: int, X: NDArray,
         X_seg_smoothed.append(np.vstack((X_int, np.zeros((K - len(X_int), n_neurons)))).T) # set to equal length with zeros
     return np.array(X_seg_smoothed), np.array(y_seg)
 
+def cal_inter_clusters_distance(cluster_centers: NDArray) -> float:
+    """Calculate the mean Euclidean distance between clusters.
+
+    Parameters:
+    ----------
+    cluster_centers: NDArray
+        The center of the clusters.
+    """
+    n_clusters = cluster_centers.shape[0]
+    distance_clusters = np.zeros(6)
+    for combo_id, combo in enumerate(combinations(range(n_clusters), 2)):
+        p, q = cluster_centers[[combo]].reshape(2,-1)
+        distance_clusters[combo_id] = np.linalg.norm(p-q)
+    return np.median(distance_clusters)
+
+def cal_within_clusters_distance(inertia: NDArray, X_shape: tuple) -> float:
+    """Calculate the mean Euclidean distance within clusters.
+
+    Parameters:
+    ----------
+    inertia: 
+        Sum of squared distances of samples to their closest cluster center.
+    X_shape: tuple
+        The dimensions of trainging data.
+    """
+    n_instance = X_shape[0]
+    return inertia/n_instance
+
+def cal_inter_clusters_similarity(affinity_matrix, clusters_labels):
+    """Calculate the inter clusters similarity based on affinity matrix.
+    """
+    clusters= np.unique(clusters_labels)
+    n_clusters = len(clusters)
+    mean_inter_clusters = np.zeros(int(np.math.factorial(n_clusters)/
+                                   (np.math.factorial(n_clusters-2)*np.math.factorial(2))))
+    # for cluster_id, cluster in enumerate(clusters):
+    for combo_id, combo in enumerate(combinations(range(n_clusters), 2)):
+        sample_ids_1 = np.where(clusters_labels==combo[0])[0]
+        sample_ids_2 = np.where(clusters_labels==combo[1])[0]
+        filtered = affinity_matrix[sample_ids_1][:, sample_ids_2]
+        # filtered = [affinity_matrix.todok()[combo_sample] for combo_sample in product(sample_ids_1, sample_ids_2)]
+        mean_inter_clusters[combo_id] = np.max(filtered)
+    return np.median(mean_inter_clusters)
+
+def cal_within_clusters_similarity(affinity_matrix, clusters_labels):
+    """Calculate within clusters similarity based on affinity matrix.
+    """
+    clusters= np.unique(clusters_labels)
+    mean_inter_clusters = np.zeros(len(clusters))
+    for cluster_id, cluster in enumerate(clusters):
+        sample_ids = np.where(clusters_labels==cluster)[0]
+        filtered = affinity_matrix[sample_ids][:, sample_ids][np.triu_indices(len(sample_ids), 1)]
+        mean_inter_clusters[cluster_id] = np.mean(filtered)
+    return np.mean(mean_inter_clusters)
+
 @njit
 def get_random_comb(array: NDArray, size: int, repeat: int, seed: Optional[int]=None) -> NDArray:
     """Get random combinations from an array.
@@ -270,3 +326,4 @@ def get_random_comb(array: NDArray, size: int, repeat: int, seed: Optional[int]=
     for i in prange(repeat):
         out[i] = np.random.choice(array, size, replace=False)
     return out
+
