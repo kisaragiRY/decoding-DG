@@ -5,6 +5,7 @@ import numpy as np
 from numpy.linalg import det, inv
 from sklearn.utils import resample
 from itertools import combinations
+from numba import njit, prange
 
 
 def gauss1d(xx: NDArray, mu: float = 0, sigma: float = .2):
@@ -299,3 +300,30 @@ def cal_within_clusters_similarity(affinity_matrix, clusters_labels):
         filtered = affinity_matrix[sample_ids][:, sample_ids][np.triu_indices(len(sample_ids), 1)]
         mean_inter_clusters[cluster_id] = np.mean(filtered)
     return np.mean(mean_inter_clusters)
+
+@njit
+def get_random_comb(array: NDArray, size: int, repeat: int, seed: Optional[int]=None) -> NDArray:
+    """Get random combinations from an array.
+
+    Parameters
+    ----------
+    array: NDArray
+        the input array to sample from.
+    size: int
+        the length of the each resampled array.
+    repeat: int
+        the number of sampling.
+    seed: Optional[int] = None
+        random seed.
+
+    Return
+    ------
+    out: NDArray
+        out out array with the size of (repeat, size)
+    """
+    np.random.seed(seed)
+    out = np.zeros((repeat, size))
+    for i in prange(repeat):
+        out[i] = np.random.choice(array, size, replace=False)
+    return out
+

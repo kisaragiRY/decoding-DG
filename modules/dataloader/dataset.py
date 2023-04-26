@@ -73,6 +73,7 @@ class BaseDataset:
         """
         if self.random_state:
             np.random.seed(self.random_state)
+            
         if self.shuffle_method == 'behavior shuffling':
             # --- 1. flip in time
             self.coords_xy = self.coords_xy[::-1]
