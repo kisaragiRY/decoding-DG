@@ -272,3 +272,30 @@ def cal_within_clusters_distance(inertia: NDArray, X_shape: tuple) -> float:
     """
     n_instance = X_shape[0]
     return inertia/n_instance
+
+def cal_inter_clusters_similarity(affinity_matrix, clusters_labels):
+    """Calculate the inter clusters similarity based on affinity matrix.
+    """
+    clusters= np.unique(clusters_labels)
+    n_clusters = len(clusters)
+    mean_inter_clusters = np.zeros(int(np.math.factorial(n_clusters)/
+                                   (np.math.factorial(n_clusters-2)*np.math.factorial(2))))
+    # for cluster_id, cluster in enumerate(clusters):
+    for combo_id, combo in enumerate(combinations(range(n_clusters), 2)):
+        sample_ids_1 = np.where(clusters_labels==combo[0])[0]
+        sample_ids_2 = np.where(clusters_labels==combo[1])[0]
+        filtered = affinity_matrix[sample_ids_1][:, sample_ids_2]
+        # filtered = [affinity_matrix.todok()[combo_sample] for combo_sample in product(sample_ids_1, sample_ids_2)]
+        mean_inter_clusters[combo_id] = np.max(filtered)
+    return np.median(mean_inter_clusters)
+
+def cal_within_clusters_similarity(affinity_matrix, clusters_labels):
+    """Calculate within clusters similarity based on affinity matrix.
+    """
+    clusters= np.unique(clusters_labels)
+    mean_inter_clusters = np.zeros(len(clusters))
+    for cluster_id, cluster in enumerate(clusters):
+        sample_ids = np.where(clusters_labels==cluster)[0]
+        filtered = affinity_matrix[sample_ids][:, sample_ids][np.triu_indices(len(sample_ids), 1)]
+        mean_inter_clusters[cluster_id] = np.mean(filtered)
+    return np.mean(mean_inter_clusters)
