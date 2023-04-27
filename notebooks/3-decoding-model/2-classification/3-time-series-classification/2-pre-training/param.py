@@ -25,6 +25,7 @@ class ParamDir:
 class ParamData:
     """Params for dataset.
     """
+    kernel_dim : int = 2
     window_size = 8
     mobility : float = 1.0
     shuffle =  False # there are two methods: behavior shuffling and events shuffling
@@ -34,7 +35,7 @@ class ParamData:
 class ParamTrain:
     """Param for training.
     """
-    model_name : str = "k_means" # available options: "k_means", "spectral"
+    model_name : str = "spectral" # available options: "k_means", "spectral"
     n_clusters : int = 4
     assign_labels : str = "cluster_qr"
     random_state : Union[int, bool] = 202304
