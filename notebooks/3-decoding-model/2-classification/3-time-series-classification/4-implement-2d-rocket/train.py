@@ -13,14 +13,14 @@ from dataloader.dataset import UniformSegmentDataset
 from param import *
 from rocket import Rocket
 
-def modified_rocket_trainer():
+def rocket_2d_trainer():
     """The training script.
     """
     for data_dir in tqdm(ParamDir().data_path_list):
         data_name = str(data_dir).split('/')[-1]
 
-        dataset = UniformSegmentDataset(data_dir, ParamData().mobility, ParamData().shuffle)
-        (X_train, y_train), (X_test, y_test) = dataset.load_all_data(ParamData().window_size, ParamData().train_ratio, ParamData().K)
+        dataset = UniformSegmentDataset(data_dir, ParamData().mobility, ParamData().shuffle, ParamData().random_state)
+        (X_train, y_train), (X_test, y_test) = dataset.load_all_data(ParamData().window_size, ParamData().K, ParamData().train_ratio)
 
         # rocket transform
         num_kernels = ParamData().num_kernels_KO if "KO" in data_name else ParamData().num_kernels_WT
@@ -38,25 +38,29 @@ def modified_rocket_trainer():
         # cross validation
         kfold = KFold(n_splits=ParamaRocketTrain().n_splits)
         if ParamaRocketTrain().model_name == "Ridge":
-            model = RidgeClassifier()
+            model = RidgeClassifier(random_state=ParamaRocketTrain().random_state)
             clf = GridSearchCV(model, 
                             param_grid={"alpha": ParamaRocketTrain().alphas},
-                            cv=kfold)
+                            cv=kfold,
+                            n_jobs=ParamaRocketTrain().njobs)
         elif ParamaRocketTrain().model_name == "SVM":
-            model = SVC()
+            model = SVC(random_state=ParamaRocketTrain().random_state)
             clf = GridSearchCV(model, 
                             param_grid={"C": ParamaRocketTrain().Cs,
                                         "kernel": ["rbf", "sigmoid"]},
-                            cv=kfold)
+                            cv=kfold,
+                            n_jobs=ParamaRocketTrain().njobs)
         elif ParamaRocketTrain().model_name == "Softmax":
             model = LogisticRegression(
                     multi_class='multinomial',
                     solver="newton-cg",
                     max_iter=1000,
-                    n_jobs=-1)
+                    n_jobs=ParamaRocketTrain().njobs,
+                    random_state=ParamaRocketTrain().random_state)
             clf = GridSearchCV(model, 
                             param_grid={"C": ParamaRocketTrain().Cs},
-                            cv=kfold)
+                            cv=kfold,
+                            n_jobs=ParamaRocketTrain().njobs)
         clf.fit(X_train, y_train)
 
         # scoring
@@ -69,7 +73,7 @@ def modified_rocket_trainer():
         if not (ParamDir().output_dir/data_name).exists():
             (ParamDir().output_dir/data_name).mkdir()
         with open(ParamDir().output_dir/data_name/
-                  (f"tsc_train_modified_rocket_{ParamaRocketTrain().model_name}_threshold_segment_{ParamData().shuffle}.pickle"),
+                  (f"tsc_train_{ParamData().kernel_dim}d_rocket_{ParamaRocketTrain().model_name}_threshold_segment_{ParamData().shuffle}.pickle"),
                   "wb") as f:
             pickle.dump(results, f)
 
@@ -125,15 +129,15 @@ def rocket_trainer_tuning(data_dir, K_range, kernels_range, note):
 
 
 if __name__ == "__main__":
-    # modified_rocket_trainer()
+    rocket_2d_trainer()
 
     # ---- large scale tuning -----
-    K_range = range(10, 22)
-    kernels_range = [2**i for i in range(2, 13)]
-    # # rocket_trainer_tuning(K_range, kernels_range, "large_scale")
-    Parallel(n_jobs=-1)(delayed(
-        rocket_trainer_tuning(data_dir, K_range, kernels_range, "large_scale")
-        )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
+    # K_range = range(10, 22)
+    # kernels_range = [2**i for i in range(2, 13)]
+    # # # rocket_trainer_tuning(K_range, kernels_range, "large_scale")
+    # Parallel(n_jobs=-1)(delayed(
+    #     rocket_trainer_tuning(data_dir, K_range, kernels_range, "large_scale")
+    #     )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
 
     # ---- small scale tuning ----
     # K_range = [16]
