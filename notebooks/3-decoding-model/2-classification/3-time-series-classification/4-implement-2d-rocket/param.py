@@ -9,7 +9,7 @@ import numpy as np
 class ParamDir:
     """Param for directory."""
     ROOT : Path = Path("/work")
-    DATA_ROOT : Path = ROOT/Path('data/alldata/')
+    DATA_ROOT : Path = ROOT/Path('data/processed/')
     OUTPUT_ROOT : Path = ROOT/Path("data/interim")
 
     def __post_init__(self) -> None:
@@ -31,10 +31,9 @@ class ParamData:
     mobility : float = 1.0
     K : int = 16 # the threshold for the length of segments
     shuffle =  "events shuffling" # there are two methods: behavior shuffling and events shuffling
-    reduction_method: str = "LEM"
-    random_state : int = 20230406
-    num_kernels_KO: int = 940
-    num_kernels_WT: int = 920
+    random_state : int = 202304
+    num_kernels_KO: int = 35
+    num_kernels_WT: int = 35
     kernel_dim: int = 2
     njobs: int = 30
 
@@ -42,7 +41,9 @@ class ParamData:
 class ParamaRocketTrain:
     """Param for training.
     """
-    model_name : str = "Ridge" # "Ridge", "SVM", "Softmax", 
-    n_splits : int = 10 # for cross validation
+    model_name : str = "SVM" # "Ridge", "SVM", "Softmax", 
+    n_splits : int = 5 # for cross validation
+    random_state : int = 202304
+    njobs: int = 30
     alphas: NDArray = np.logspace(-3, 3, 10)
     Cs: NDArray = np.logspace(-3, 3, 10)
