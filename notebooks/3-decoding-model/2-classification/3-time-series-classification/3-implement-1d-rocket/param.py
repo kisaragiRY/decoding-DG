@@ -30,8 +30,7 @@ class ParamData:
     train_ratio: float = .8
     mobility : float = 1.0
     K : int = 16 # the threshold for the length of segments
-    shuffle: bool =  "events shuffling" # there are two methods: behavior shuffling and events shuffling
-    reduction_method: str = "LEM"
+    shuffle: bool =  "behavior shuffling" # there are two methods: behavior shuffling and events shuffling
     random_state : int = 202304
     num_kernels_KO: int = 200
     num_kernels_WT: int = 200
