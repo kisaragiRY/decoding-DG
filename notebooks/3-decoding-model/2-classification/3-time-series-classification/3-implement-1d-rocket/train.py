@@ -180,13 +180,12 @@ def rocket_shuffle_trainer(data_dir: Path, repeats: int) -> None:
         res_all.append(res)
     if not (ParamDir().output_dir/data_name).exists():
         (ParamDir().output_dir/data_name).mkdir()
-    with open(ParamDir().output_dir/data_name/(f"tsc_shuffle_train_rocket.pickle"),"wb") as f:
+    with open(ParamDir().output_dir/data_name/(f"tsc_shuffle_{ParamaRocketTrain().model_name}_{ParamData().shuffle}_train_rocket.pickle"),"wb") as f:
         pickle.dump(res_all, f)
 
 
 if __name__ == "__main__":
     # rocket_trainer_threshold_segment()
-    # LEM_trainer_threshold_segment()
 
     # ---- large scale tuning -----
     # K_range = range(10, 22)

@@ -39,7 +39,7 @@ class ParamData:
 class ParamaRocketTrain:
     """Param for training.
     """
-    model_name : str = "Ridge" # "Ridge", "SVM", "Softmax", 
+    model_name : str = "Ridge" # "Ridge", "SVM"
     n_splits : int = 5 # for cross validation
     alphas: NDArray = np.logspace(-3, 3, 10)
     Cs: NDArray = np.logspace(-3, 3, 10)
