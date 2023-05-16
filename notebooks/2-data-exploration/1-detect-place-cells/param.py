@@ -7,7 +7,7 @@ from dataclasses import dataclass
 class ParamDir:
     """Parameters for directories."""
     ROOT : Path = Path("/work")
-    DATA_ROOT : Path = ROOT/Path('data/alldata/')
+    DATA_ROOT : Path = ROOT/Path('data/processed/')
     OUTPUT_ROOT : Path = ROOT/Path("data/interim")
 
     def __post_init__(self) -> None:
@@ -24,3 +24,16 @@ class ParamDir:
 class ParamShuffle:
     """Parameters for shuffling."""
     num_repeat : int = 500
+
+@dataclass
+class ParamData:
+    """Param for dataset.
+    """
+    window_size: int = 8
+    train_ratio: float = .8
+    mobility : float = 1.0
+    K : int = 16 # the threshold for the length of segments
+    shuffle: bool =  False # there are two methods: behavior shuffling and events shuffling
+    random_state : int = 202304
+    num_kernels_KO: int = 200
+    num_kernels_WT: int = 200   
