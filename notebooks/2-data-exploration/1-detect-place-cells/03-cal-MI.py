@@ -12,33 +12,37 @@ def cal_all_MI(data_dir: Path):
     based on original data and shuffled data.
     """
     data_name = str(data_dir).split('/')[-1]
-    original_MI, beh_shuffled_MI_all, event_shuffled_MI_all = [], [], []
-    for i in tqdm(range(ParamShuffle().num_repeat)):
-        beh_dataset = BaseDataset(data_dir, 'behavior shuffling')
-        event_dataset = BaseDataset(data_dir, 'events shuffling')
 
-        binned_position = bin_pos(beh_dataset.coords_xy, 2) # discretized into 2x2 grid
-        shuffled_position = bin_pos(beh_dataset.shuffled_coords_xy, 2)
+    base_dataset = BaseDataset(data_dir, ParamData().mobility, False, False)
+    base_position = bin_pos(base_dataset.coords_xy, 2) # discretized into 2x2 grid
+    base_spikes = base_dataset.spikes
+    num_neurons = base_spikes.shape[1]
 
-        shuffled_spikes = event_dataset.shuffle_spikes
+    original_MI = np.zeros(ParamShuffle().num_repeat)
+    beh_shuffled_MI_all = np.zeros(ParamShuffle().num_repeat * num_neurons)
+    event_shuffled_MI_all = np.zeros(ParamShuffle().num_repeat * num_neurons)
 
-        info = InfoMetrics(beh_dataset.spikes, binned_position)
-        beh_shuffled_info = InfoMetrics(beh_dataset.spikes, shuffled_position)
-        event_shuffled_info = InfoMetrics(shuffled_spikes, binned_position)
+    for seed in tqdm(range(ParamShuffle().num_repeat)):
+        beh_dataset = BaseDataset(data_dir, ParamData().mobility,'behavior shuffling', seed)
+        event_dataset = BaseDataset(data_dir, ParamData().mobility, 'events shuffling', seed)
 
-        beh_shuffled_MI, event_shuffled_MI = [], []
-        for n_id in range(beh_dataset.spikes.shape[1]):
-            if i == 0:
-                original_MI.append(info.mutual_info(n_id)) # orignal MI
-            beh_shuffled_MI.append(beh_shuffled_info.mutual_info(n_id)) # behavior shuffled MI
-            event_shuffled_MI.append(event_shuffled_info.mutual_info(n_id)) # event shuffled MI
-        beh_shuffled_MI_all.append(beh_shuffled_MI)
-        event_shuffled_MI_all.append(event_shuffled_MI)
+        shuffled_position = bin_pos(beh_dataset.coords_xy, 2)
+        shuffled_spikes = event_dataset.spikes
+
+        info = InfoMetrics(base_spikes, base_position)
+        beh_shuffled_info = InfoMetrics(base_spikes, shuffled_position)
+        event_shuffled_info = InfoMetrics(shuffled_spikes, base_position)
+
+        for n_id in range(num_neurons):
+            if seed == 0:
+                original_MI[seed] = info.mutual_info(n_id) # orignal MI
+            beh_shuffled_MI_all[seed*num_neurons+n_id] = beh_shuffled_info.mutual_info(n_id) # behavior shuffled MI
+            event_shuffled_MI_all[seed*num_neurons+n_id]  = event_shuffled_info.mutual_info(n_id) # event shuffled MI
         
     result_MI = {
         "original MI": original_MI,
-        "behavior shuffled MI all": beh_shuffled_MI_all,
-        'event shuffled MI all': event_shuffled_MI_all
+        "behavior shuffled MI all": beh_shuffled_MI_all.reshape(ParamShuffle().num_repeat, num_neurons),
+        'event shuffled MI all': event_shuffled_MI_all.reshape(ParamShuffle().num_repeat, num_neurons)
     }
     if not (ParamDir().output_dir/data_name).exists():
         (ParamDir().output_dir/data_name).mkdir()
