@@ -52,7 +52,7 @@ def bin_pos(coords: NDArray, num_par: int = 2, partition_type : str = "grid") ->
     binned_position_x = np.digitize(actual_coord[:,0], bin_edges)
     binned_position_y = np.digitize(actual_coord[:,1], bin_edges)
 
-    binned_position = np.zeros(num_time_bins)
+    binned_position = np.zeros(num_time_bins, dtype=int)
     for t in range(num_time_bins):
         x, y = binned_position_x[t], binned_position_y[t]
         binned_position[t] = int((y-1) * num_par + x)
