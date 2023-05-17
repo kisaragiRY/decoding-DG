@@ -52,7 +52,7 @@ def bin_pos(coords: NDArray, num_par: int = 2, partition_type : str = "grid") ->
     binned_position_x = np.digitize(actual_coord[:,0], bin_edges)
     binned_position_y = np.digitize(actual_coord[:,1], bin_edges)
 
-    binned_position = np.zeros(num_time_bins)
+    binned_position = np.zeros(num_time_bins, dtype=int)
     for t in range(num_time_bins):
         x, y = binned_position_x[t], binned_position_y[t]
         binned_position[t] = int((y-1) * num_par + x)
@@ -327,3 +327,15 @@ def get_random_comb(array: NDArray, size: int, repeat: int, seed: Optional[int]=
         out[i] = np.random.choice(array, size, replace=False)
     return out
 
+@njit
+def nd_unique(array: NDArray) -> NDArray:
+    """Get the unique elements of the multi dimension array.
+    """
+    res = np.zeros(array.shape, dtype=array.dtype)
+    end = 0
+    
+    for item in array:
+        if sum([(item == i).all() for i in res[:end]])-1:
+            res[end] = item
+            end += 1
+    return res[:end]
