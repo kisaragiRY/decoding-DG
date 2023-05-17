@@ -107,28 +107,17 @@ def cal_sta(dataset, num_par: int, neuron_id: int) -> NDArray:
     
     return sta
 
-def get_3sigma(results_all: list, neuron_id: int) -> Tuple:
-    """Get the 3 sigma from the shuffled MI.
-    
-    Return
+def get_place_cell(results_all: dict, sig_level: float) -> Tuple:
+    """Get place cells based on two shuffle methods.
+
+    Parameters
     ----------
-    behavior_3sigma : float
-        3sigma for behavior shuffled MI.
-    event_3sigma : float
-        3sigma for event shuffled MI.
-    """
-    beh_std_3 = np.array(results_all['behavior shuffled MI all'])[:,neuron_id].std()*3
-    event_std_3 = np.array(results_all['event shuffled MI all'])[:,neuron_id].std()*3
-
-    beh_mu = np.array(results_all['behavior shuffled MI all'])[:,neuron_id].mean()
-    event_mu = np.array(results_all['event shuffled MI all'])[:,neuron_id].mean()
-
-    behavior_3sigma = beh_mu + beh_std_3
-    event_3sigma = event_mu + event_std_3
-    return behavior_3sigma, event_3sigma
-
-def get_pc_ratio(results_all:list) -> Tuple:
-    """Get place cells ratio based on two shuffle methods.
+    results_all: dict
+        It has three items "original MI", "behavior shuffled MI all" 
+        and "event shuffled MI all".
+        Inside each, it's a numpy array with shape (shuffle_repeats, num_neuron).
+    sig_level: float
+        significance level.
 
     Return
     ----------
@@ -137,12 +126,19 @@ def get_pc_ratio(results_all:list) -> Tuple:
     pc_event_id : list
         place cell ratio from event shuffling method.
     """
+    # check sig_level:
+    if (type(sig_level) != float) :
+        ValueError("sig_level needs to be a float number.")
+    if (sig_level < 1) and (sig_level > 0):
+        ValueError("sig_level needs to be within the range of 0 to 1.")
+
     pc_beh_id, pc_event_id = [], []
     for neuron_id in range(len(results_all['original MI'])):
-        behavior_3sigma, event_3sigma = get_3sigma(results_all, neuron_id)
-        if results_all['original MI'][neuron_id] > behavior_3sigma:
+        behavior_pvalue = np.quantile(results_all['behavior shuffled MI all'][:, neuron_id], 1-sig_level)
+        event_pvalue = np.quantile(results_all['event shuffled MI all'][:, neuron_id], 1-sig_level)
+        if results_all['original MI'][neuron_id] > behavior_pvalue:
             pc_beh_id.append(neuron_id)
-        if results_all['original MI'][neuron_id] > event_3sigma:
+        if results_all['original MI'][neuron_id] > event_pvalue:
             pc_event_id.append(neuron_id)
     return (pc_beh_id, pc_event_id)
 
