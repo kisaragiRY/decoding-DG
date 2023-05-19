@@ -175,7 +175,8 @@ def rocket_shuffle_trainer(data_dir: Path, repeats: int) -> None:
 
         res = {
             "estimator": clf,
-            "scores": scores
+            "scores": scores,
+            "seed": seed,
         }
         res_all.append(res)
     if not (ParamDir().output_dir/data_name).exists():
@@ -205,7 +206,7 @@ if __name__ == "__main__":
 
     # ---- shuffle train ----
     repeats = 1000
-    Parallel(n_jobs=-1)(delayed(
+    Parallel(n_jobs=15)(delayed(
         rocket_shuffle_trainer(data_dir, repeats)
         )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
 
