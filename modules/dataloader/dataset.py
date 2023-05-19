@@ -46,7 +46,7 @@ class BaseDataset:
             self.spikes = self.spikes[vel > self.mobility]
 
         if self.shuffle_method:
-            if self.shuffle_method not in ['behavior shuffling', 'events shuffling']:
+            if self.shuffle_method not in ['behavior shuffling', 'events shuffling', 'segment label shuffling']:
                 raise ValueError("Please specify a valid shuffle method. It can either be 'behavior shuffling' or 'events shuffling'.")
             else:
                 self._shuffle()
@@ -80,7 +80,7 @@ class BaseDataset:
             # --- 2. shift a random amount
             random_num = np.random.randint(1, len(self.coords_xy))
             self.coords_xy = np.roll(self.coords_xy, random_num)
-        else:
+        elif self.shuffle_method == 'events shuffling':
             for row in self.spikes:
                 # shuffle the row when there are spikes
                 if np.sum(row) > 0:
@@ -315,6 +315,15 @@ class UniformSegmentDataset(BaseDataset):
         X, y = data
         segment_ind = segment_with_threshold(y, K) # get the segmentation indices
         X_new, y_new = get_segment_data(segment_ind, K, window_size, X, y)
+
+        if self.shuffle_method == 'segment label shuffling':
+            # the method is the same as behavior shuffling but it's for y_new(segments' labels)
+            # --- 1. flip in time
+            y_new = y_new[::-1]
+            # --- 2. shift a random amount
+            random_num = np.random.randint(1, len(y_new))
+            y_new = np.roll(y_new, random_num)
+
         return X_new, y_new
     
     def load_all_data(self, window_size : int, K: int, train_ratio: Optional[float] = None) -> Tuple:
