@@ -1,7 +1,7 @@
 from dataloader import SmoothedSpikesDataset
 from decoder import RidgeRegression
 
-from util import spilt_data
+from utils.util import spilt_data
 from param import *
 import pickle
 from tqdm import tqdm

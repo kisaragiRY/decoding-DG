@@ -8,7 +8,7 @@ from sklearn.decomposition import PCA
 
 from dataloader.dataset import BaseDataset
 from param import *
-from util import segment, downsample, segment_with_threshold, get_segment_data
+from utils.util import segment, downsample, segment_with_threshold, get_segment_data
 
 @dataclass
 class DownsampleDataset(BaseDataset):

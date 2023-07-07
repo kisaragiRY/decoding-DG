@@ -7,7 +7,7 @@ from typing import Tuple
 from param import *
 from dataloader import SmoothedSpikesDataset
 from model_selection import SearchCV
-from util import spilt_data
+from utils.util import spilt_data
 
 
 def main() -> None:
