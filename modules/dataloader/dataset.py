@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from util import gauss1d, cal_velocity, bin_pos, segment_with_threshold, get_segment_data, downsample
+from utils.util import gauss1d, cal_velocity, bin_pos, segment_with_threshold, get_segment_data, downsample
 
 def _is_valid_axis(coord_axis: str) -> bool:
     """Check whether the axis is valid.

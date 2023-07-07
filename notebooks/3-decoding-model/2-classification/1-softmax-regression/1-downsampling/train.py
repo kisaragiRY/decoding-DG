@@ -9,7 +9,7 @@ from imblearn.over_sampling import SMOTE
 
 from dataloader.dataset import BaseDataset
 from param import *
-from util import downsample
+from utils.util import downsample
 # from decoder import SoftmaxRegression
 
 

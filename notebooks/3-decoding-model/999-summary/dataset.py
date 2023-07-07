@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from dataloader.dataset import BaseDataset
-from util import segment, downsample
+from utils.util import segment, downsample
 
 @dataclass
 class SoftmaxDataset(BaseDataset):

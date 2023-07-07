@@ -6,7 +6,7 @@ from sklearn.svm import SVC
 
 from dataloader.dataset import BaseDataset
 from param import *
-from util import downsample
+from utils.util import downsample
 
 @dataclass
 class Dataset(BaseDataset):

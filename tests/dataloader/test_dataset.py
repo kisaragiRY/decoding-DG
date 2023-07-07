@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from util import gauss1d
+from utils.util import gauss1d
 from modules.dataloader import *
 
 @pytest.fixture

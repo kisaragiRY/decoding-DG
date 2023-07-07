@@ -6,7 +6,7 @@ from numba import prange, njit
 from metrics import InfoMetrics
 from dataloader import BaseDataset
 from param import *
-from util import bin_pos
+from utils.util import bin_pos
 
 def cal_all_MI(data_dir: Path):
     """Calculate MI.

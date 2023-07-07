@@ -10,7 +10,7 @@ import statsmodels.api as sm
 
 from dataloader.dataset import BaseDataset
 from param import *
-from util import segment, downsample, segment_with_threshold, get_segment_data
+from utils.util import segment, downsample, segment_with_threshold, get_segment_data
 
 @dataclass
 class Dataset(BaseDataset):
