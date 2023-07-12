@@ -38,6 +38,7 @@ def rocket_trainer_threshold_segment():
         X_train = X_train[:, active_features]
         X_test = transform_pipeline.transform(X_test)
         X_test = X_test[:, active_features]
+        print(X_train.shape)
 
         # cross validation
         kfold = KFold(n_splits=ParamaRocketTrain().n_splits)
@@ -69,7 +70,8 @@ def rocket_trainer_threshold_segment():
 
         results = {
             "estimator": clf,
-            "scores": scores
+            "scores": scores,
+            "data": [(X_train, y_train), (X_test, y_test)]
         }
         if not (ParamDir().output_dir/data_name).exists():
             (ParamDir().output_dir/data_name).mkdir()
@@ -186,7 +188,7 @@ def rocket_shuffle_trainer(data_dir: Path, repeats: int) -> None:
 
 
 if __name__ == "__main__":
-    # rocket_trainer_threshold_segment()
+    rocket_trainer_threshold_segment()
 
     # ---- large scale tuning -----
     # K_range = range(10, 22)
@@ -205,10 +207,10 @@ if __name__ == "__main__":
     #     )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
 
     # ---- shuffle train ----
-    repeats = 1000
-    Parallel(n_jobs=15)(delayed(
-        rocket_shuffle_trainer(data_dir, repeats)
-        )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
+    # repeats = 1000
+    # Parallel(n_jobs=15)(delayed(
+    #     rocket_shuffle_trainer(data_dir, repeats)
+    #     )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
 
 
 
