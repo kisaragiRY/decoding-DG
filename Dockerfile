@@ -48,7 +48,7 @@ COPY poetry.lock pyproject.toml ./
 ENV POETRY_HOME=/usr/local/poetry \
     POETRY_VERSION=1.4.0
 RUN /usr/local/bin/python3.8 -m pip install --upgrade pip \
-    && curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python3 - 
+    && curl -sSL https://install.python-poetry.org | python3 - 
 RUN echo 'export PATH="$POETRY_HOME/bin:$PATH"' >> $HOME/.bashrc && \
     $POETRY_HOME/bin/poetry config virtualenvs.create false && \
     $POETRY_HOME/bin/poetry install --no-root
