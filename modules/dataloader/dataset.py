@@ -314,14 +314,6 @@ class UniformSegmentDataset(BaseDataset):
         segment_ind = segment_with_threshold(y, K) # get the segmentation indices
         X_new, y_new = get_segment_data(segment_ind, K, window_size, X, y)
 
-        if self.shuffle_method == 'segment label shuffling':
-            # the method is the same as behavior shuffling but it's for y_new(segments' labels)
-            # --- 1. flip in time
-            y_new = y_new[::-1]
-            # --- 2. shift a random amount
-            random_num = np.random.randint(1, len(y_new))
-            y_new = np.roll(y_new, random_num)
-
         return X_new, y_new
     
     def load_all_data(self, window_size : int, K: int, train_ratio: Optional[float] = None) -> Tuple:
@@ -336,36 +328,28 @@ class UniformSegmentDataset(BaseDataset):
         train_ratio : Optional[float] = None
             the training set ration, in the range of 0 and 1.
         """
-        if train_ratio:
-            # --- split data 
-            (self.X_train_base, self.y_train_base), (self.X_test_base, self.y_test_base) = self.split_data(self.spikes, self._discretize_coords(), train_ratio)
 
-            # --- remove inactive neurons
-            self.active_neurons = self.X_train_base.sum(axis=0)>0
-            self.X_train_active = self.X_train_base[:, self.active_neurons]
-            self.X_test_active = self.X_test_base[:, self.active_neurons]
+        # --- split data 
+        (self.X_train_base, self.y_train_base), (self.X_test_base, self.y_test_base) = self.split_data(self.spikes, self._discretize_coords(), train_ratio)
 
-            # --- segment data while smoothing
-            self.X_train_seg, self.y_train_seg = self._get_segment_data((self.X_train_active, self.y_train_base), window_size, K)
-            self.X_test_seg, self.y_test_seg = self._get_segment_data((self.X_test_active, self.y_test_base), window_size, K)
+        # --- remove inactive neurons
+        self.active_neurons = self.X_train_base.sum(axis=0)>0
+        self.X_train_active = self.X_train_base[:, self.active_neurons]
+        self.X_test_active = self.X_test_base[:, self.active_neurons]
 
-            # -- downsample
-            self.X_train, self.y_train = downsample(self.X_train_seg, self.y_train_seg, self.random_state)
-            self.X_test, self.y_test = downsample(self.X_test_seg, self.y_test_seg, self.random_state)
+        # --- segment data while smoothing
+        self.X_train_seg, self.y_train_seg = self._get_segment_data((self.X_train_active, self.y_train_base), window_size, K)
+        self.X_test_seg, self.y_test_seg = self._get_segment_data((self.X_test_active, self.y_test_base), window_size, K)
 
-            return (self.X_train, self.y_train), (self.X_test, self.y_test)
+        # -- downsample
+        self.X_train, self.y_train = downsample(self.X_train_seg, self.y_train_seg, self.random_state)
+        self.X_test, self.y_test = downsample(self.X_test_seg, self.y_test_seg, self.random_state)
+        
+        # -- shuffle
+        if self.shuffle_method == 'segment label shuffling':
+            np.random.shuffle(self.y_train)
+            np.random.shuffle(self.y_test)
 
-        else:
-            self.X_train_base, self.y_train_base = self.spikes, self._discretize_coords()
+        return (self.X_train, self.y_train), (self.X_test, self.y_test)
 
-            # --- remove inactive neurons
-            self.active_neurons = self.X_train.sum(axis=0)>0
-            self.X_train_active = self.X_train_base[:, self.active_neurons]
 
-            # --- segment data while smoothing
-            self.X_train_seg, self.y_train_seg = self._get_segment_data((self.X_train_active, self.y_train_base), window_size, K)
-
-            # -- downsample
-            self.X_train, self.y_train = downsample(self.X_train_seg, self.y_train_seg, self.random_state)
-
-            return self.X_train, self.y_train
