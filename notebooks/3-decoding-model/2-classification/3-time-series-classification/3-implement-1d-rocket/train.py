@@ -141,7 +141,7 @@ def rocket_shuffle_trainer(data_dir: Path, repeats: int) -> None:
     data_name = str(data_dir).split('/')[-1]
     res_all = []
     for seed in tqdm(prange(repeats)):
-        dataset = UniformSegmentDataset(data_dir, ParamData().mobility, ParamData().shuffle, seed)
+        dataset = UniformSegmentDataset(data_dir, ParamData().mobility, "segment label shuffling", seed)
         (X_train, y_train), (X_test, y_test) = dataset.load_all_data(ParamData().window_size, ParamData().K, ParamData().train_ratio)
 
         # rocket transform
@@ -188,7 +188,7 @@ def rocket_shuffle_trainer(data_dir: Path, repeats: int) -> None:
 
 
 if __name__ == "__main__":
-    rocket_trainer_threshold_segment()
+    # rocket_trainer_threshold_segment()
 
     # ---- large scale tuning -----
     # K_range = range(10, 22)
@@ -207,10 +207,10 @@ if __name__ == "__main__":
     #     )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
 
     # ---- shuffle train ----
-    # repeats = 1000
-    # Parallel(n_jobs=15)(delayed(
-    #     rocket_shuffle_trainer(data_dir, repeats)
-    #     )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
+    repeats = 1000
+    Parallel(n_jobs=15)(delayed(
+        rocket_shuffle_trainer(data_dir, repeats)
+        )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
 
 
 
