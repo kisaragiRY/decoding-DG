@@ -1,43 +1,20 @@
 # `notebooks/` Structure
 
 - 1-data-preparation
-    - `01-excel-to-csv.ipynb`
+    - convert the original data to csv to improve data loading speed.
 - 2-data-exploration
-    > explanatory analysis 
     - 1-detect-place-cells
+        - neural analysis
+        - mutual information, firing rate
+    - 2-check-movement
+        - behavioral analysis
+        - velocity, stay period in one position.
+    - 3-effect-of-discretization
+        - firing rate and velocity at each position.
 - 3-decoding-model
-    - 1-linear-regression
-        - 1-raw-data
-            - `01-implement-ridge-regression-raw-data.py`
-                - implemented rr model with raw data
-                - coordinate~spike count
-            - `02-analysis-rr-raw-data.ipynb`
-                - analysed the results
-        - 2-summed-spikes
-            - `01-implement-rr-summed-spikes.py`
-                - implemented rr model with summed spikes
-                - coordinate~summed spike count from history bins
-            - `02-analysis-rr-summed-spikes.ipynb`
-                - analysed the results
-        - 3-past-coordinates
-            - 0-measure-time-spent
-                - `01-load-data.ipynb`
-                - `02-parallel-computation.ipynb`
-                - `03-matrix-multiplication.ipynb`
-            - 1-implement-spikes-past-coord
-                - `01-decoded-loc.ipynb`
-                    - visualize representatives decoded loc compared to real loc in two-dim and one-dim.
-                - `02-overall-scores.ipynb`
-                    - aggregate the decoding scores from different mice.
-                - `train.py`
-                - `param.py`
-                - `eval.py`
-            - 2-implement-only-past-coord
-                - `01-check-only-past-coord.ipynb`
-                - `train.py`
-                - `param.py`
-                - `eval.py`
-            - 3-model-comparison
-                - `01-F-test.ipynb`
-        - 4-incorporate-history-spikes
-    - 2-softmax-regression
+    - 1-varied-num-of-samples
+        - implementation of ROCKET based on varied number of samples from each position label.
+    - 2-uniform-num-of-samples
+        - implementation of ROCKET based on uniform number of samples from each position label.
+- 4-individual-analysis
+    - difference between ns and sig mice.
