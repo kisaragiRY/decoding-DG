@@ -55,10 +55,10 @@ RUN echo 'export PATH="$POETRY_HOME/bin:$PATH"' >> $HOME/.bashrc && \
 
 # Create the user with the same uid and gid as the host server (tmp solution)
 ARG USERNAME=developer
-ARG USER_UID=202003
-ARG USER_GID=1000
-RUN groupadd --gid $USER_GID $USERNAME &&\
-    useradd --uid $USER_UID --gid $USER_GID -m $USERNAME &&\
+ARG USER_UID
+ARG USER_GID
+RUN if [$(id -g) -nq 20]; then groupadd --gid $USER_GID $USERNAME; fi
+RUN useradd --uid $USER_UID --gid $USER_GID -m $USERNAME &&\
     # add the $USERNAME to root group
     usermod -aG root $USERNAME &&\
     apt-get update &&\
