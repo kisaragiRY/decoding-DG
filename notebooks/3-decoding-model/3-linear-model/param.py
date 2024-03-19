@@ -39,7 +39,7 @@ class ParamData:
     num_samples: int = 14
 
 @dataclass
-class ParamaRocketTrain:
+class ParamaLinearTrain:
     """Param for training.
     """
     model_name : str = "SVM" # "Ridge", "SVM"

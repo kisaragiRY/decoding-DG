@@ -13,7 +13,8 @@ from sklearn.svm import SVC
 from itertools import product
 from numba import jit, prange
 
-from dataloader.dataset import UniformSegmentDataset
+# from dataloader.dataset import UniformSegmentDataset
+from modules.dataloader.dataset import UniformSegmentDataset
 from datasets import *
 from param import *
 
@@ -23,14 +24,14 @@ def rocket_trainer_threshold_segment():
     for data_dir in tqdm(ParamDir().data_path_list):
         data_name = str(data_dir).split('/')[-1]
 
-        dataset = UniformSegmentDataset(data_dir, ParamData().mobility, ParamData().shuffle, ParamData().random_state)
+        dataset = UniformSegmentDataset(data_dir, ParamData().mobility, False, ParamData().random_state)
         (X_train, y_train), (X_test, y_test) = dataset.load_all_data(ParamData().window_size, ParamData().K, ParamData().train_ratio)
 
         # rocket transform
         num_kernels = ParamData().num_kernels_KO if "KO" in data_name else ParamData().num_kernels_WT
         transform_pipeline = Pipeline([
             ("rocket", Rocket(num_kernels, random_state=ParamData().random_state)),
-            ("std_scaler", StandardScaler()),
+            # ("std_scaler", StandardScaler()),
             ("l2_norm", Normalizer()),
         ])
         X_train = transform_pipeline.fit_transform(X_train)
@@ -76,10 +77,11 @@ def rocket_trainer_threshold_segment():
         if not (ParamDir().output_dir/data_name).exists():
             (ParamDir().output_dir/data_name).mkdir()
         with open(ParamDir().output_dir/data_name/
-                  (f"tsc_train_rocket_{ParamaRocketTrain().model_name}_threshold_segment_{ParamData().shuffle}.pickle"),
+                  (f"tsc_train_rocket_{ParamaRocketTrain().model_name}_threshold_segment.pickle"),
                   "wb") as f:
             pickle.dump(results, f)
 
+'''
 def rocket_trainer_tuning(data_dir, K_range, kernels_range, note):
     """The training script.
     """
@@ -136,7 +138,8 @@ def rocket_trainer_tuning(data_dir, K_range, kernels_range, note):
         (ParamDir().output_dir/data_name).mkdir()
     with open(ParamDir().output_dir/data_name/(f"tsc_tuning_rocket_{note}.pickle"),"wb") as f:
         pickle.dump(res_all, f)
-
+'''
+        
 def rocket_shuffle_trainer(data_dir: Path, repeats: int) -> None:
     data_name = str(data_dir).split('/')[-1]
     res_all = []
@@ -148,7 +151,7 @@ def rocket_shuffle_trainer(data_dir: Path, repeats: int) -> None:
         num_kernels = ParamData().num_kernels_KO if "KO" in data_name else ParamData().num_kernels_WT
         transform_pipeline = Pipeline([
             ("rocket", Rocket(num_kernels, random_state=ParamData().random_state)),
-            ("std_scaler", StandardScaler()),
+            # ("std_scaler", StandardScaler()),
             ("l2_norm", Normalizer()),
         ])
         X_train = transform_pipeline.fit_transform(X_train)
@@ -183,12 +186,12 @@ def rocket_shuffle_trainer(data_dir: Path, repeats: int) -> None:
         res_all.append(res)
     if not (ParamDir().output_dir/data_name).exists():
         (ParamDir().output_dir/data_name).mkdir()
-    with open(ParamDir().output_dir/data_name/(f"tsc_shuffle_{ParamaRocketTrain().model_name}_{ParamData().shuffle}_train_rocket.pickle"),"wb") as f:
+    with open(ParamDir().output_dir/data_name/(f"tsc_shuffle_{ParamaRocketTrain().model_name}_segment_shuffling_train_rocket.pickle"),"wb") as f:
         pickle.dump(res_all, f)
 
 
 if __name__ == "__main__":
-    # rocket_trainer_threshold_segment()
+    rocket_trainer_threshold_segment()
 
     # ---- large scale tuning -----
     # K_range = range(10, 22)
