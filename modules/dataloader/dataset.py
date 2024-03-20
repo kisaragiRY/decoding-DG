@@ -1,12 +1,12 @@
 from numpy.typing import NDArray
-from typing import Tuple, Optional, Union
+from typing import Tuple, Optional, Union, Literal
 
 from dataclasses import dataclass
 from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from utils.util import gauss1d, cal_velocity, bin_pos, segment_with_threshold, get_segment_data, downsample
+from ..utils.util import *
 
 def _is_valid_axis(coord_axis: str) -> bool:
     """Check whether the axis is valid.
@@ -30,11 +30,11 @@ class BaseDataset:
         if given, must specify the threshold for identifying immobility.
     shuffle_method : Optional[str]
         whether to shuffle the data, and if does, specify the method.
-        the value can be either False, 'behavior shuffling' or 'events shuffling'.
+        the value can be either False, 'behavior shuffling', 'events shuffling' or "segment label shuffling".
     """
     data_dir : Path
     mobility : Union[float, bool]
-    shuffle_method : Union[str, bool]
+    shuffle_method : Union[Literal['behavior shuffling', 'events shuffling', 'segment label shuffling'], bool]
     random_state: Union[int, bool] 
 
     def __post_init__(self) -> None:

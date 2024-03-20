@@ -4,20 +4,20 @@ from sktime.transformations.panel.rocket import Rocket
 from sklearn.preprocessing import Normalizer, StandardScaler
 from sklearn.model_selection import GridSearchCV, KFold
 from sklearn.pipeline import Pipeline
-from sklearn.linear_model import RidgeClassifier, LogisticRegression
+from sklearn.linear_model import RidgeClassifier
 from sklearn.svm import SVC
+from numba import jit, prange
+from joblib import Parallel, delayed
 
 from modules.dataloader.dataset import UniformSegmentDataset
 from datasets import *
 from param import *
 
-def rocket_trainer_threshold_segment():
-    """The training script.
-    """
-    for data_dir in tqdm(ParamDir().data_path_list):
-        data_name = str(data_dir).split('/')[-1]
-
-        dataset = UniformSegmentDataset(data_dir, ParamData().mobility, False, ParamData().random_state)
+def rocket_shuffle_trainer(data_dir: Path, repeats: int) -> None:
+    data_name = str(data_dir).split('/')[-1]
+    res_all = []
+    for seed in tqdm(prange(repeats)):
+        dataset = UniformSegmentDataset(data_dir, ParamData().mobility, "segment label shuffling", seed)
         (X_train, y_train), (X_test, y_test) = dataset.load_all_data(ParamData().window_size, ParamData().K, ParamData().train_ratio)
 
         # rocket transform
@@ -32,7 +32,6 @@ def rocket_trainer_threshold_segment():
         X_train = X_train[:, active_features]
         X_test = transform_pipeline.transform(X_test)
         X_test = X_test[:, active_features]
-        print(X_train.shape)
 
         # cross validation
         kfold = KFold(n_splits=ParamaRocketTrain().n_splits)
@@ -47,47 +46,27 @@ def rocket_trainer_threshold_segment():
                             param_grid={"C": ParamaRocketTrain().Cs,
                                         "kernel": ["rbf", "sigmoid"]},
                             cv=kfold)
-        elif ParamaRocketTrain().model_name == "Softmax":
-            model = LogisticRegression(
-                    multi_class='multinomial',
-                    solver="newton-cg",
-                    max_iter=1000,
-                    n_jobs=-1,
-                    random_state=ParamaRocketTrain().random_state)
-            clf = GridSearchCV(model, 
-                            param_grid={"C": ParamaRocketTrain().Cs},
-                            cv=kfold)
         clf.fit(X_train, y_train)
 
         # scoring
         scores = clf.score(X_test, y_test)
 
-        results = {
+        res = {
             "estimator": clf,
             "scores": scores,
-            "data": [(X_train, y_train), (X_test, y_test)]
+            "seed": seed,
         }
-        if not (ParamDir().output_dir/data_name).exists():
-            (ParamDir().output_dir/data_name).mkdir()
-        with open(ParamDir().output_dir/data_name/
-                  (f"tsc_train_rocket_{ParamaRocketTrain().model_name}_threshold_segment_{ParamData().shuffle}.pickle"),
-                  "wb") as f:
-            pickle.dump(results, f)
-
-
+        res_all.append(res)
+    if not (ParamDir().output_dir/data_name).exists():
+        (ParamDir().output_dir/data_name).mkdir()
+    with open(ParamDir().output_dir/data_name/(f"tsc_shuffle_{ParamaRocketTrain().model_name}_{ParamData().shuffle}_train_rocket.pickle"),"wb") as f:
+        pickle.dump(res_all, f)
 
 if __name__ == "__main__":
-    # ---- training ----
-    rocket_trainer_threshold_segment()
 
     # ---- shuffle train ----
-    # repeats = 1000
-    # Parallel(n_jobs=15)(delayed(
-    #     rocket_shuffle_trainer(data_dir, repeats)
-    #     )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
+    repeats = 1000
+    Parallel(n_jobs=15)(delayed(
+        rocket_shuffle_trainer(data_dir, repeats)
+        )(data_dir) for data_dir in tqdm(ParamDir().data_path_list))
 
-
-
-
-
-    

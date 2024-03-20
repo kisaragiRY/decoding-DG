@@ -6,9 +6,9 @@ import pickle
 from sklearn.manifold import SpectralEmbedding
 from sklearn.decomposition import PCA
 
-from dataloader.dataset import BaseDataset
+from modules.dataloader.dataset import BaseDataset
 from param import *
-from utils.util import segment, downsample, segment_with_threshold, get_segment_data
+from modules.utils.util import segment, downsample, segment_with_threshold, get_segment_data
 
 @dataclass
 class DownsampleDataset(BaseDataset):

@@ -3,10 +3,10 @@ from tqdm import tqdm
 from joblib import Parallel, delayed
 from numba import prange, njit
 
-from metrics import InfoMetrics
-from dataloader import BaseDataset
+from modules.metrics import InfoMetrics
+from modules.dataloader import BaseDataset
 from param import *
-from utils.util import bin_pos
+from modules.utils.util import bin_pos
 
 def cal_all_MI(data_dir: Path):
     """Calculate MI.

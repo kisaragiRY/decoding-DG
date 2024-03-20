@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from numba import njit, prange
 
-from util import nd_unique
+from ..utils.util import nd_unique
 
 @njit
 def mutual_info(spikes: NDArray, status: NDArray, nueron_id: int) -> float:

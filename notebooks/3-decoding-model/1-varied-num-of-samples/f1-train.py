@@ -13,7 +13,7 @@ from sklearn.svm import SVC
 from itertools import product
 from numba import jit, prange
 
-from dataloader.dataset import UniformSegmentDataset
+from modules.dataloader.dataset import UniformSegmentDataset
 from datasets import *
 from param import *
 
