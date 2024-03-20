@@ -1,0 +1,14 @@
+version: '3.7'
+services:
+  dg-decoding:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: dg-decoding:py3.8.5
+    container_name: dg-decoding-container
+    volumes:
+      - ./:/work
+      - ${RAW_DATA_PATH}:/work/data/raw 
+    tty: true
+    env_file:
+      - .env
